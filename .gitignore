@@ -1,0 +1,13 @@
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+
+# Avoid uploading project settings that are machine-specific
+[Aa]ssets/AssetStoreTools*
+
+# Visual Studio Code specific
+.vscode/ 
