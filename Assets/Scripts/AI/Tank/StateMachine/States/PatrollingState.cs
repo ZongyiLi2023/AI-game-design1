@@ -55,13 +55,14 @@ namespace CE6127.Tanks.AI
             PatrolMaxZ = 50f;
         }
 
-        private float patrolWaitTimeCounter = 0f;
+        // private float patrolWaitTimeCounter = 0f;
+        private bool fireAllowed = true;
 
         public override void Update()
         {
             base.Update();
 
-            // 如果有玩家目标则追踪玩家
+            // 如果有玩家目标则持续追踪玩家
             if (m_TankSM.Target != null)
             {
                 // 计算坦克和玩家之间的距离
@@ -69,17 +70,16 @@ namespace CE6127.Tanks.AI
 
                 // 将计算出的距离传递给 FollowPlayer 方法
                 FollowPlayer(dist);
+
+                // 当子弹发射的Cooldown到期了则发射子弹
+                if (dist <= m_TankSM.StopDistance && fireAllowed)
+                {
+                    fireAllowed = false;
+                    m_TankSM.StartCoroutine(FireCooldown());
+                    float launchForce = Random.Range(m_TankSM.LaunchForceMinMax.x, m_TankSM.LaunchForceMinMax.y);
+                    m_TankSM.LaunchProjectile(launchForce);
+                }
                 return;
-            }
-
-            // 计时器递增
-            patrolWaitTimeCounter += Time.deltaTime;
-
-            // 当计时器达到下一次巡逻时间时，生成新的随机巡逻目标
-            if (patrolWaitTimeCounter >= m_TankSM.PatrolNavMeshUpdate)
-            {
-                patrolWaitTimeCounter = 0f; // 重置计时器
-                GenerateNewPatrolDestination();
             }
         }
 
@@ -104,11 +104,11 @@ namespace CE6127.Tanks.AI
     {
         m_TankSM.NavMeshAgent.SetDestination(m_TankSM.Target.position);
     }
-    else
+    /*else
     {
         Vector3 targetPosition = GetRandomPositionAroundPlayer();
         m_TankSM.NavMeshAgent.SetDestination(targetPosition);
-    }
+    }*/
 }
 
 
@@ -130,15 +130,33 @@ namespace CE6127.Tanks.AI
         {
             while (true)
             {
-                float destinationX = Random.Range(PatrolMinX, PatrolMaxX);
-                float destinationZ = Random.Range(PatrolMinZ, PatrolMaxZ);
-                m_Destination = new Vector3(destinationX, 0f, destinationZ);
+                // 如果有玩家则追踪玩家
+                if (m_TankSM.Target != null)
+                {
+                    //
+                }
+                // 否则游走
+                else
+                {
+                    float destinationX = Random.Range(PatrolMinX, PatrolMaxX);
+                    float destinationZ = Random.Range(PatrolMinZ, PatrolMaxZ);
+                    m_Destination = new Vector3(destinationX, 0f, destinationZ);
 
-                m_TankSM.NavMeshAgent.SetDestination(m_Destination);
+                    m_TankSM.NavMeshAgent.SetDestination(m_Destination);
+
+                }
 
                 float waitInSec = Random.Range(m_TankSM.PatrolWaitTime.x, m_TankSM.PatrolWaitTime.y);
                 yield return new WaitForSeconds(waitInSec);
             }
+        }
+
+        IEnumerator FireCooldown()
+        {
+            float waitInSec = Random.Range(m_TankSM.FireInterval.x, m_TankSM.FireInterval.y);
+            yield return new WaitForSeconds(waitInSec);
+            fireAllowed = true;
+            yield break;
         }
     }
 }
