@@ -70,7 +70,7 @@ namespace CE6127.Tanks.AI
         private IEnumerator FireAtTarget()
         {
             // Initial cooldown before firing the first shot
-            float initialWait = Random.Range(m_TankSM.FireInterval.x, m_TankSM.FireInterval.y);
+            float initialWait = m_TankSM.FireInterval.x;
             yield return new WaitForSeconds(initialWait);
 
             while (true)
@@ -80,6 +80,18 @@ namespace CE6127.Tanks.AI
                 {
                     Vector3 directionToTarget = m_TankSM.Target.position - m_TankSM.transform.position;
                     directionToTarget.y = 0; // Ignore the y-axis for rotation
+
+                    // Move towards the target if the distance is greater than the stop distance
+                    float distanceToTarget = Vector3.Distance(m_TankSM.transform.position, m_TankSM.Target.position);
+                    if (distanceToTarget > m_TankSM.StopDistance)
+                    {
+                        m_TankSM.NavMeshAgent.SetDestination(m_TankSM.Target.position);
+                    }
+                    else
+                    {
+                        // Stop the tank if within stopping distance
+                        m_TankSM.NavMeshAgent.ResetPath();
+                    }
 
                     Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
 
@@ -93,14 +105,22 @@ namespace CE6127.Tanks.AI
                         yield return null; // Wait for the next frame
                     }
 
-                    // Fire the shell once the tank is facing the target
-                    float launchForce = Random.Range(m_TankSM.LaunchForceMinMax.x, m_TankSM.LaunchForceMinMax.y);
+                    // Once the tank is facing the target, calculate the required launch force
+                    float gravity = Mathf.Abs(Physics.gravity.y);
+                    float angleInRadians = Mathf.Deg2Rad * 45; // Use a 45 degree angle for optimal distance
+
+                    // Calculate the required launch velocity based on the projectile motion formula
+                    float launchForce = Mathf.Sqrt((distanceToTarget * gravity) / Mathf.Sin(2 * angleInRadians));
+
+                    // Clamp the launch force to respect the min/max values, hey! we are following the rules!!!
+                    launchForce = Mathf.Clamp(launchForce, m_TankSM.LaunchForceMinMax.x, m_TankSM.LaunchForceMinMax.y);
+
                     m_TankSM.LaunchProjectile(launchForce);
+                    Debug.Log("force: " + launchForce);
                 }
 
                 // Use the cooldown time from TankSM's FireInterval
                 float waitInSec = m_TankSM.FireInterval.x;
-                Debug.Log("wait for: " + waitInSec);
                 yield return new WaitForSeconds(waitInSec);
             }
         }

@@ -213,6 +213,7 @@ namespace CE6127.Tanks.AI
                     ChangeState(m_States.Patrolling);
                 }
             }
+            Debug.Log("Tank State changed to: " + currentState.GetType().Name);
         }
 
 
