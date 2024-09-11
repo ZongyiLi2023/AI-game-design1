@@ -112,6 +112,9 @@ namespace CE6127.Tanks.AI
                     // Calculate the required launch velocity based on the projectile motion formula
                     float launchForce = Mathf.Sqrt((distanceToTarget * gravity) / Mathf.Sin(2 * angleInRadians));
 
+                    float variation = Random.Range(-0.05f, 0.25f) * launchForce; // variations to make sure the target is not hidding
+                    launchForce += variation;
+
                     // Clamp the launch force to respect the min/max values, hey! we are following the rules!!!
                     launchForce = Mathf.Clamp(launchForce, m_TankSM.LaunchForceMinMax.x, m_TankSM.LaunchForceMinMax.y);
 
