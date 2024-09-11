@@ -76,8 +76,8 @@ namespace CE6127.Tanks.AI
                 {
                     fireAllowed = false;
                     m_TankSM.StartCoroutine(FireCooldown());
-                    float launchForce = Random.Range(m_TankSM.LaunchForceMinMax.x, m_TankSM.LaunchForceMinMax.y);
-                    m_TankSM.LaunchProjectile(launchForce);
+                    /*float launchForce = Random.Range(m_TankSM.LaunchForceMinMax.x, m_TankSM.LaunchForceMinMax.y);*/
+                    /*m_TankSM.LaunchProjectile(launchForce);*/
                 }
                 return;
             }
@@ -153,7 +153,9 @@ namespace CE6127.Tanks.AI
 
         IEnumerator FireCooldown()
         {
-            float waitInSec = Random.Range(m_TankSM.FireInterval.x, m_TankSM.FireInterval.y);
+            /*            float waitInSec = Random.Range(m_TankSM.FireInterval.x, m_TankSM.FireInterval.y);
+            */
+            float waitInSec = 0.5f;
             yield return new WaitForSeconds(waitInSec);
             fireAllowed = true;
             yield break;

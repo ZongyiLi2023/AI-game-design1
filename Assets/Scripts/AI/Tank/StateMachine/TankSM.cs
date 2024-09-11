@@ -87,6 +87,8 @@ namespace CE6127.Tanks.AI
             NavMeshAgent.angularSpeed = GameManager.AngularSpeed;
         }
 
+        private BaseState currentState; // Track the current state of the tank
+
         /// <summary>
         /// Method <c>SetStopDistanceToZero</c> sets the NavMeshAgent's stopping distance to zero.
         /// </summary>
@@ -155,6 +157,20 @@ namespace CE6127.Tanks.AI
         }
 
         /// <summary>
+        /// Method <c>ChangeState</c> handles the transition between states.
+        /// </summary>
+        private void ChangeState(BaseState newState)
+        {
+            if (currentState != null)
+            {
+                currentState.Exit(); // Exit the current state
+            }
+
+            currentState = newState; // Switch to the new state
+            currentState.Enter();    // Enter the new state
+        }
+
+        /// <summary>
         /// Method <c>Update</c> is called every frame, if the MonoBehaviour is enabled.
         /// </summary>
         private new void Update()
@@ -166,6 +182,7 @@ namespace CE6127.Tanks.AI
             }
             else if (GameManager.IsRoundPlaying)
             {
+                HandleStateTransitions();
                 base.Update();
             }
             else
@@ -174,6 +191,30 @@ namespace CE6127.Tanks.AI
                 StopAllCoroutines();
             }
         }
+
+        /// <summary>
+        /// Method <c>HandleStateTransitions</c> handles state transitions based on target distance.
+        /// </summary>
+        private void HandleStateTransitions()
+        {
+            if (Target != null)
+            {
+                // Calculate the distance to the target
+                float distanceToTarget = Vector3.Distance(transform.position, Target.position);
+
+                // Transition to AttackState if target is within StartToTargetDist
+                if (distanceToTarget <= TargetDistance && currentState != m_States.Attack)
+                {
+                    ChangeState(m_States.Attack);
+                }
+                // Transition back to PatrollingState if the target is out of StopAtTargetDist range
+                else if (distanceToTarget > StopDistance && currentState != m_States.Patrolling)
+                {
+                    ChangeState(m_States.Patrolling);
+                }
+            }
+        }
+
 
         /// <summary>
         /// Method <c>LaunchProjectile</c> instantiate and launch the shell.
