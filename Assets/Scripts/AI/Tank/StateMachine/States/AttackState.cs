@@ -69,14 +69,38 @@ namespace CE6127.Tanks.AI
         /// </summary>
         private IEnumerator FireAtTarget()
         {
+            // Initial cooldown before firing the first shot
+            float initialWait = Random.Range(m_TankSM.FireInterval.x, m_TankSM.FireInterval.y);
+            yield return new WaitForSeconds(initialWait);
+
             while (true)
             {
-                float launchForce = Random.Range(m_TankSM.LaunchForceMinMax.x, m_TankSM.LaunchForceMinMax.y);
-                Debug.Log("Firing at target with force: " + launchForce);
-                m_TankSM.LaunchProjectile(launchForce);
+                // Make sure the tank faces the target before firing
+                if (m_TankSM.Target != null)
+                {
+                    Vector3 directionToTarget = m_TankSM.Target.position - m_TankSM.transform.position;
+                    directionToTarget.y = 0; // Ignore the y-axis for rotation
 
-                // Wait for a random amount of time before firing again
-                float waitInSec = 0.5f;
+                    Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
+
+                    // Smoothly rotate the tank towards the target, using the OrientSlerpScalar for interpolation
+                    float rotationSpeed = m_TankSM.OrientSlerpScalar * m_TankSM.NavMeshAgent.angularSpeed;
+
+                    // Gradually rotate the tank over multiple frames until facing the target
+                    while (Quaternion.Angle(m_TankSM.transform.rotation, targetRotation) > 0.1f)
+                    {
+                        m_TankSM.transform.rotation = Quaternion.Slerp(m_TankSM.transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+                        yield return null; // Wait for the next frame
+                    }
+
+                    // Fire the shell once the tank is facing the target
+                    float launchForce = Random.Range(m_TankSM.LaunchForceMinMax.x, m_TankSM.LaunchForceMinMax.y);
+                    m_TankSM.LaunchProjectile(launchForce);
+                }
+
+                // Use the cooldown time from TankSM's FireInterval
+                float waitInSec = m_TankSM.FireInterval.x;
+                Debug.Log("wait for: " + waitInSec);
                 yield return new WaitForSeconds(waitInSec);
             }
         }
