@@ -47,6 +47,15 @@ namespace CE6127.Tanks.AI
                 {
                     m_StateMachine.ChangeState(m_TankSM.m_States.Patrolling);
                 }
+                // If the target is in range, the AI will head for the relative postion towards the target
+                // i.e. change the destination of the AI from the target postion to the relative position towards the target
+                else
+                {
+                    Vector3 targetPosition = m_TankSM.Target.position;
+                    Vector3 relativePosition = ; // Assigen each AI with one of the relative positions
+                    Vector3 directionToDestination = relativePosition + m_TankSM.target.position;
+                    m_TankSM.NavMeshAgent.SetDestination(relativePosition);
+                }
             }
         }
 
