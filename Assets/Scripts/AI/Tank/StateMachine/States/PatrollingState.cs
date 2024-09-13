@@ -35,6 +35,7 @@ namespace CE6127.Tanks.AI
             float sectionWidth = (mapMaxX - mapMinX) / 3;
 
             int randomSection = Random.Range(0, 3);  // 随机选择分区
+            // 怎么防止重复选择同一个分区？
             switch (randomSection)
             {
                 case 0:

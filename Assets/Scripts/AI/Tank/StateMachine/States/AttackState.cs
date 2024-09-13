@@ -52,9 +52,29 @@ namespace CE6127.Tanks.AI
                 else
                 {
                     Vector3 targetPosition = m_TankSM.Target.position;
-                    Vector3 relativePosition = ; // Assigen each AI with one of the relative positions
-                    Vector3 directionToDestination = relativePosition + m_TankSM.target.position;
-                    m_TankSM.NavMeshAgent.SetDestination(relativePosition);
+
+                    int randomRelativePosition = Random.Range(0, 3);
+                    
+                    // Get the index already assigned to other AI
+                    // Assign the relative position based on the random number index that are not assigned to any other AI
+                    // Record this index
+
+                    switch (randomRelativePosition)
+                    {
+                        case 0:
+                            relativePosition = new Vector3(5f, 0f, 0f); // the radiance of the circle needs to be tested
+                            break;
+                        case 1:
+                            relativePosition = new Vector3(0f, 0f, 5f);
+                            break;
+                        case 2:
+                            relativePosition = new Vector3(-5f, 0f, 0f);
+                            break;
+                        default:
+                            relativePosition = Vector3.zero;
+                            break;
+                    }
+                    M_TankSM.NavMeshAgent.SetDestination(targetPosition + relativePosition);
                 }
             }
         }
