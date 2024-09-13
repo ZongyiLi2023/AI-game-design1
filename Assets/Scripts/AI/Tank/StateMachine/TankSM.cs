@@ -205,15 +205,16 @@ namespace CE6127.Tanks.AI
                 // Transition to AttackState if target is within StartToTargetDist
                 if (distanceToTarget <= TargetDistance && currentState != m_States.Attack)
                 {
+                    Debug.Log("Tank State changed to Attack");
                     ChangeState(m_States.Attack);
                 }
                 // Transition back to PatrollingState if the target is out of StopAtTargetDist range
                 else if (distanceToTarget > StopDistance && currentState != m_States.Patrolling)
                 {
+                    Debug.Log("Tank State changed to Patrol");
                     ChangeState(m_States.Patrolling);
                 }
             }
-            Debug.Log("Tank State changed to: " + currentState.GetType().Name);
         }
 
 

@@ -13,6 +13,8 @@ namespace CE6127.Tanks.AI
         private float PatrolMinZ;
         private float PatrolMaxZ;
 
+        private Coroutine patrolCoroutine = null; // Reference to the patrol coroutine.
+
         public PatrollingState(TankSM tankStateMachine) : base("Patrolling", tankStateMachine)
         {
             m_TankSM = (TankSM)m_StateMachine;
@@ -24,7 +26,7 @@ namespace CE6127.Tanks.AI
             m_TankSM.SetStopDistanceToZero();
 
             AssignRandomSection();  // 分配坦克的巡逻区域
-            m_TankSM.StartCoroutine(Patrolling());  // 开始巡逻
+            patrolCoroutine = m_TankSM.StartCoroutine(Patrolling());  // 开始巡逻
         }
 
         // 随机分配巡逻区域
@@ -56,7 +58,6 @@ namespace CE6127.Tanks.AI
         }
 
         // private float patrolWaitTimeCounter = 0f;
-        private bool fireAllowed = true;
 
         public override void Update()
         {
@@ -68,18 +69,16 @@ namespace CE6127.Tanks.AI
                 // 计算坦克和玩家之间的距离
                 float dist = Vector3.Distance(m_TankSM.transform.position, m_TankSM.Target.position);
 
-                // 将计算出的距离传递给 FollowPlayer 方法
-                FollowPlayer(dist);
-
-                // 当子弹发射的Cooldown到期了则发射子弹
-                if (dist <= m_TankSM.StopDistance && fireAllowed)
+                // 如果距离到达指定距离则转移状态
+                if (dist <= m_TankSM.TargetDistance)
                 {
-                    fireAllowed = false;
-                    m_TankSM.StartCoroutine(FireCooldown());
-                    /*float launchForce = Random.Range(m_TankSM.LaunchForceMinMax.x, m_TankSM.LaunchForceMinMax.y);*/
-                    /*m_TankSM.LaunchProjectile(launchForce);*/
+                    m_TankSM.ChangeState(m_TankSM.m_States.Attack);
                 }
-                return;
+                else
+                {
+                    // 将计算出的距离传递给 FollowPlayer 方法
+                    FollowPlayer(dist);
+                }
             }
         }
 
@@ -97,33 +96,30 @@ namespace CE6127.Tanks.AI
 
 
         // 追踪玩家的逻辑
-       private void FollowPlayer(float distance)
-{
-    float closerStopDistance = m_TankSM.StopDistance / 2;  // 减小停止距离的一半
-    if (distance > closerStopDistance)  // 如果距离大于新的停止距离
-    {
-        m_TankSM.NavMeshAgent.SetDestination(m_TankSM.Target.position);
-    }
-    /*else
-    {
-        Vector3 targetPosition = GetRandomPositionAroundPlayer();
-        m_TankSM.NavMeshAgent.SetDestination(targetPosition);
-    }*/
-}
+        private void FollowPlayer(float distance)
+        {
+            float closerStopDistance = m_TankSM.StopDistance / 2;  // 减小停止距离的一半
+            if (distance > closerStopDistance)  // 如果距离大于新的停止距离
+            {
+                m_TankSM.NavMeshAgent.SetDestination(m_TankSM.Target.position);
+            }
+        }
 
 
         // 在玩家周围生成随机目标位置
+        /*
         private Vector3 GetRandomPositionAroundPlayer()
         {
             Vector2 randomOffset = Random.insideUnitCircle * 12f;
             Vector3 randomPosition = new Vector3(m_TankSM.Target.position.x + randomOffset.x, m_TankSM.Target.position.y, m_TankSM.Target.position.z + randomOffset.y);
             return randomPosition;
         }
+        */
 
         public override void Exit()
         {
             base.Exit();
-            m_TankSM.StopCoroutine(Patrolling());
+            m_TankSM.StopCoroutine(patrolCoroutine);
         }
 
         IEnumerator Patrolling()
@@ -133,7 +129,7 @@ namespace CE6127.Tanks.AI
                 // 如果有玩家则追踪玩家
                 if (m_TankSM.Target != null)
                 {
-                    //
+                    m_TankSM.NavMeshAgent.SetDestination(m_TankSM.Target.position);
                 }
                 // 否则游走
                 else
@@ -149,16 +145,6 @@ namespace CE6127.Tanks.AI
                 float waitInSec = Random.Range(m_TankSM.PatrolWaitTime.x, m_TankSM.PatrolWaitTime.y);
                 yield return new WaitForSeconds(waitInSec);
             }
-        }
-
-        IEnumerator FireCooldown()
-        {
-            /*            float waitInSec = Random.Range(m_TankSM.FireInterval.x, m_TankSM.FireInterval.y);
-            */
-            float waitInSec = 0.5f;
-            yield return new WaitForSeconds(waitInSec);
-            fireAllowed = true;
-            yield break;
         }
     }
 }

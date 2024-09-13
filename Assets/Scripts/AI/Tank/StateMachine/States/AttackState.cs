@@ -43,9 +43,22 @@ namespace CE6127.Tanks.AI
             if (m_TankSM.Target != null)
             {
                 float distance = Vector3.Distance(m_TankSM.transform.position, m_TankSM.Target.position);
-                if (distance > m_TankSM.TargetDistance) // If target is out of range, transition to another state (e.g., Patrolling)
+                if (distance > m_TankSM.TargetDistance * 1.5) // If target is out of range, transition to another state (e.g., Patrolling)
                 {
+                    Debug.Log("Target out of range. Transitioning to Patrolling state.");
                     m_StateMachine.ChangeState(m_TankSM.m_States.Patrolling);
+                }
+                else
+                {
+                    Debug.Log("turning");
+                    // turn the tank to face the target
+                    Vector3 directionToTarget = m_TankSM.Target.position - m_TankSM.transform.position;
+                    directionToTarget.y = 0; // Ignore the y-axis for rotation
+                    Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
+                    // Smoothly rotate the tank towards the target, using the OrientSlerpScalar for interpolation
+                    float rotationSpeed = m_TankSM.OrientSlerpScalar * m_TankSM.NavMeshAgent.angularSpeed;
+                    // rotate the tank but subject to the rotation speed
+                    m_TankSM.transform.rotation = Quaternion.Slerp(m_TankSM.transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
                 }
             }
         }
