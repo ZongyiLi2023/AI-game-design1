@@ -11,6 +11,8 @@ namespace CE6127.Tanks.AI
     {
         private TankSM m_TankSM;        // Reference to the tank state machine.
         private Coroutine fireCoroutine; // Reference to the firing coroutine.
+        private bool isDodging;         // Indicates if the tank is currently dodging an obstacle.
+        private const float RaycastDistance = 5f; // Distance for obstacle detection.
 
         /// <summary>
         /// Constructor <c>AttackState</c> constructor.
@@ -28,8 +30,11 @@ namespace CE6127.Tanks.AI
             base.Enter();
             m_TankSM.SetStopDistanceToTarget(); // Ensure the tank stops at the correct distance from the target
 
-            // Start the firing coroutine
-            fireCoroutine = m_TankSM.StartCoroutine(FireAtTarget());
+            // Start the firing coroutine only if it's not already running
+            if (fireCoroutine == null)
+            {
+                fireCoroutine = m_TankSM.StartCoroutine(FireAtTarget());
+            }
         }
 
         /// <summary>
@@ -50,15 +55,43 @@ namespace CE6127.Tanks.AI
                 }
                 else
                 {
-                    Debug.Log("turning");
-                    // turn the tank to face the target
-                    Vector3 directionToTarget = m_TankSM.Target.position - m_TankSM.transform.position;
-                    directionToTarget.y = 0; // Ignore the y-axis for rotation
-                    Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
-                    // Smoothly rotate the tank towards the target, using the OrientSlerpScalar for interpolation
-                    float rotationSpeed = m_TankSM.OrientSlerpScalar * m_TankSM.NavMeshAgent.angularSpeed;
-                    // rotate the tank but subject to the rotation speed
-                    m_TankSM.transform.rotation = Quaternion.Slerp(m_TankSM.transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+                    // Detect obstacles using raycasting
+                    if (DetectObstacle())
+                    {
+                        // If an obstacle is detected, start dodging
+                        if (!isDodging)
+                        {
+                            isDodging = true;
+                            // Stop shooting while dodging
+                            if (fireCoroutine != null)
+                            {
+                                m_TankSM.StopCoroutine(fireCoroutine);
+                                fireCoroutine = null;
+                            }
+                            StartDodging();
+                        }
+                    }
+                    else
+                    {
+                        // If no obstacles, stop dodging and resume normal attack behavior
+                        if (isDodging)
+                        {
+                            isDodging = false;
+                            // Resume shooting
+                            if (fireCoroutine == null)
+                            {
+                                fireCoroutine = m_TankSM.StartCoroutine(FireAtTarget());
+                            }
+                        }
+                        // turn the tank to face the target
+                        Vector3 directionToTarget = m_TankSM.Target.position - m_TankSM.transform.position;
+                        directionToTarget.y = 0; // Ignore the y-axis for rotation
+                        Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
+                        // Smoothly rotate the tank towards the target, using the OrientSlerpScalar for interpolation
+                        float rotationSpeed = m_TankSM.OrientSlerpScalar * m_TankSM.NavMeshAgent.angularSpeed;
+                        // rotate the tank but subject to the rotation speed
+                        m_TankSM.transform.rotation = Quaternion.Slerp(m_TankSM.transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+                    }
                 }
             }
         }
@@ -74,6 +107,7 @@ namespace CE6127.Tanks.AI
             if (fireCoroutine != null)
             {
                 m_TankSM.StopCoroutine(fireCoroutine);
+                fireCoroutine = null;
             }
         }
 
@@ -106,18 +140,6 @@ namespace CE6127.Tanks.AI
                         m_TankSM.NavMeshAgent.ResetPath();
                     }
 
-/*                    Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
-
-                    // Smoothly rotate the tank towards the target, using the OrientSlerpScalar for interpolation
-                    float rotationSpeed = m_TankSM.OrientSlerpScalar * m_TankSM.NavMeshAgent.angularSpeed;
-
-                    // Gradually rotate the tank over multiple frames until facing the target
-                    while (Quaternion.Angle(m_TankSM.transform.rotation, targetRotation) > 0.1f)
-                    {
-                        m_TankSM.transform.rotation = Quaternion.Slerp(m_TankSM.transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
-                        yield return null; // Wait for the next frame
-                    }
-*/
                     // Once the tank is facing the target, calculate the required launch force
                     float gravity = Mathf.Abs(Physics.gravity.y);
                     float angleInRadians = Mathf.Deg2Rad * 45; // Use a 45 degree angle for optimal distance
@@ -139,6 +161,75 @@ namespace CE6127.Tanks.AI
                 float waitInSec = m_TankSM.FireInterval.x;
                 yield return new WaitForSeconds(waitInSec);
             }
+        }
+
+        /// <summary>
+        /// Method <c>DetectObstacle</c> uses raycasting to detect obstacles in front of the tank.
+        /// </summary>
+        /*        private bool DetectObstacle()
+                {
+                    RaycastHit hit;
+                    // Perform a raycast in the direction the tank is facing
+                    if (Physics.Raycast(m_TankSM.transform.position, m_TankSM.transform.forward, out hit, RaycastDistance))
+                    {
+                        // If the raycast hits an obstacle with a collider
+                        if (hit.collider != null && hit.collider.gameObject != m_TankSM.Target.gameObject)
+                        {
+                            Debug.Log("Obstacle detected: " + hit.collider.name);
+                            return true;
+                        }
+                    }
+                    return false;
+                }*/
+
+        /// <summary>
+        /// Method <c>DetectObstacle</c> uses raycasting to detect obstacles or friend tanks in front of the tank.
+        /// </summary>
+        private bool DetectObstacle()
+        {
+            RaycastHit[] hits;
+            // Perform a raycast in the direction the tank is facing
+            hits = Physics.RaycastAll(m_TankSM.transform.position, m_TankSM.transform.forward, RaycastDistance);
+
+            foreach (RaycastHit hit in hits)
+            {
+                // If the raycast hits an obstacle with a collider
+                if (hit.collider != null)
+                {
+                    // Check if the hit object is not the target and not the tank itself
+                    if (hit.collider.gameObject != m_TankSM.Target.gameObject && hit.collider.gameObject != m_TankSM.gameObject)
+                    {
+                        // Check if it's a friend tank
+                        if (hit.collider.GetComponent<TankSM>() != null)
+                        {
+                            // Debug.Log("Friend tank detected along the path: " + hit.collider.name);
+                            return true; // Friend tank is along the path
+                        }
+
+                        // Check if it's an obstacle
+                        // Debug.Log("Obstacle detected: " + hit.collider.name);
+                        return true; // Obstacle detected
+                    }
+                }
+            }
+
+            return false;
+        }
+
+
+        /// <summary>
+        /// Method <c>StartDodging</c> starts the dodging movement to avoid the obstacle.
+        /// </summary>
+        private void StartDodging()
+        {
+            // Calculate a random direction to dodge
+            Vector3 dodgeDirection = Random.insideUnitSphere;
+            dodgeDirection.y = 0; // Only move in the XZ plane
+            dodgeDirection.Normalize();
+
+            // Set a new destination to dodge to
+            Vector3 dodgeDestination = m_TankSM.transform.position + dodgeDirection * 20f; // Adjust the dodge distance as needed
+            m_TankSM.NavMeshAgent.SetDestination(dodgeDestination);
         }
     }
 }
