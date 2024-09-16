@@ -106,7 +106,7 @@ namespace CE6127.Tanks.AI
                         m_TankSM.NavMeshAgent.ResetPath();
                     }
 
-                    Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
+/*                    Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
 
                     // Smoothly rotate the tank towards the target, using the OrientSlerpScalar for interpolation
                     float rotationSpeed = m_TankSM.OrientSlerpScalar * m_TankSM.NavMeshAgent.angularSpeed;
@@ -117,7 +117,7 @@ namespace CE6127.Tanks.AI
                         m_TankSM.transform.rotation = Quaternion.Slerp(m_TankSM.transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
                         yield return null; // Wait for the next frame
                     }
-
+*/
                     // Once the tank is facing the target, calculate the required launch force
                     float gravity = Mathf.Abs(Physics.gravity.y);
                     float angleInRadians = Mathf.Deg2Rad * 45; // Use a 45 degree angle for optimal distance
