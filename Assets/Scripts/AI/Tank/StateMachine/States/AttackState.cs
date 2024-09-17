@@ -1,6 +1,8 @@
-using System.Collections;
+﻿using System.Collections;
 using UnityEngine;
 using Random = UnityEngine.Random;
+using System.Reflection;
+
 
 namespace CE6127.Tanks.AI
 {
@@ -14,12 +16,27 @@ namespace CE6127.Tanks.AI
         private bool isDodging;         // Indicates if the tank is currently dodging an obstacle.
         private const float RaycastDistance = 5f; // Distance for obstacle detection.
 
+
+
+        private object tankHealthInstance;  // 保存TankHealth实例
+        private FieldInfo currentHealthField; // 保存反射获取的m_CurrentHealth字段
+        private float maxHealth;  // 保存最大血量
+
+
+
+        private int tankIndex;     // 坦克的编号，用于队形分配
+        private const float FormationRadius = 5f; // 队形的半径
+        private static int tankCount = 0; // 追踪当前有多少坦克进入状态
+
+
         /// <summary>
         /// Constructor <c>AttackState</c> constructor.
         /// </summary>
         public AttackState(TankSM tankStateMachine) : base("Attack", tankStateMachine)
         {
             m_TankSM = (TankSM)m_StateMachine;
+
+
         }
 
         /// <summary>
@@ -29,6 +46,31 @@ namespace CE6127.Tanks.AI
         {
             base.Enter();
             m_TankSM.SetStopDistanceToTarget(); // Ensure the tank stops at the correct distance from the target
+
+
+            // 为坦克分配队形编号
+            tankIndex = tankCount % 3; // 分配编号 0, 1, 2
+            tankCount++;
+
+
+            // 使用反射获取 TankHealth 实例
+            var tankHealthType = typeof(TankHealth);
+            tankHealthInstance = m_TankSM.GetComponent(tankHealthType);
+
+            if (tankHealthInstance != null)
+            {
+                // 通过反射获取 m_CurrentHealth 私有字段
+                currentHealthField = tankHealthType.GetField("m_CurrentHealth", BindingFlags.NonPublic | BindingFlags.Instance);
+
+                // 获取最大血量，直接访问公开的 StartingHealth 字段
+                maxHealth = (float)tankHealthType.GetField("StartingHealth").GetValue(tankHealthInstance);
+            }
+            else
+            {
+                Debug.LogError("TankHealth component not found on the tank.");
+            }
+
+
 
             // Start the firing coroutine only if it's not already running
             if (fireCoroutine == null)
@@ -44,9 +86,40 @@ namespace CE6127.Tanks.AI
         {
             base.Update();
 
+
+            if (tankHealthInstance != null && currentHealthField != null)
+            {
+                // 每帧通过反射获取当前血量
+                float currentHealth = (float)currentHealthField.GetValue(tankHealthInstance);
+
+                // 检查血量是否小于最大血量的三分之一
+                if (currentHealth <= maxHealth / 3)
+                {
+                    m_StateMachine.ChangeState(new FleeState(m_TankSM));
+                    if (fireCoroutine != null)
+                    {
+                        m_TankSM.StopCoroutine(fireCoroutine);
+                        fireCoroutine = null;
+                    }
+                    return;
+                }
+            }
+
             // Check if the target is still within range
             if (m_TankSM.Target != null)
             {
+                Vector3 playerPosition = m_TankSM.Target.position;
+
+                // 计算坦克相对玩家的位置
+                Vector3 relativePosition = CalculatePositionAroundPlayer(playerPosition, tankIndex);
+
+                // 让坦克移动到计算出的相对位置
+                m_TankSM.NavMeshAgent.SetDestination(relativePosition);
+
+
+
+
+
                 float distance = Vector3.Distance(m_TankSM.transform.position, m_TankSM.Target.position);
                 if (distance > m_TankSM.TargetDistance * 1.5) // If target is out of range, transition to another state (e.g., Patrolling)
                 {
@@ -164,25 +237,6 @@ namespace CE6127.Tanks.AI
         }
 
         /// <summary>
-        /// Method <c>DetectObstacle</c> uses raycasting to detect obstacles in front of the tank.
-        /// </summary>
-        /*        private bool DetectObstacle()
-                {
-                    RaycastHit hit;
-                    // Perform a raycast in the direction the tank is facing
-                    if (Physics.Raycast(m_TankSM.transform.position, m_TankSM.transform.forward, out hit, RaycastDistance))
-                    {
-                        // If the raycast hits an obstacle with a collider
-                        if (hit.collider != null && hit.collider.gameObject != m_TankSM.Target.gameObject)
-                        {
-                            Debug.Log("Obstacle detected: " + hit.collider.name);
-                            return true;
-                        }
-                    }
-                    return false;
-                }*/
-
-        /// <summary>
         /// Method <c>DetectObstacle</c> uses raycasting to detect obstacles or friend tanks in front of the tank.
         /// </summary>
         private bool DetectObstacle()
@@ -231,5 +285,21 @@ namespace CE6127.Tanks.AI
             Vector3 dodgeDestination = m_TankSM.transform.position + dodgeDirection * 20f; // Adjust the dodge distance as needed
             m_TankSM.NavMeshAgent.SetDestination(dodgeDestination);
         }
+
+
+        private Vector3 CalculatePositionAroundPlayer(Vector3 playerPosition, int tankIndex)
+        {
+            // 计算每个坦克的角度，分别为0度、120度、240度
+            float angle = tankIndex * 120f;
+            float radians = angle * Mathf.Deg2Rad;
+
+            // 使用队形半径计算坦克相对玩家的位置
+            float xOffset = FormationRadius * Mathf.Cos(radians);
+            float zOffset = FormationRadius * Mathf.Sin(radians);
+
+            // 返回相对位置
+            return new Vector3(playerPosition.x + xOffset, playerPosition.y, playerPosition.z + zOffset);
+        }
+
     }
 }

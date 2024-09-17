@@ -18,12 +18,14 @@ namespace CE6127.Tanks.AI
             public IdleState Idle;
             public PatrollingState Patrolling;
             public AttackState Attack;
+            public FleeState Flee;
 
             internal States(TankSM sm)
             {
                 Idle = new IdleState(sm);
                 Patrolling = new PatrollingState(sm);
                 Attack = new AttackState(sm);
+                Flee = new FleeState(sm);
             }
         }
 
@@ -201,6 +203,8 @@ namespace CE6127.Tanks.AI
             {
                 // Calculate the distance to the target
                 float distanceToTarget = Vector3.Distance(transform.position, Target.position);
+
+                // Debug.Log("target distance: " + distanceToTarget + " stop distance: " + StopDistance + " target distance: " + TargetDistance);
 
                 // Transition to AttackState if target is within StartToTargetDist
                 if (distanceToTarget <= TargetDistance && currentState != m_States.Attack)
