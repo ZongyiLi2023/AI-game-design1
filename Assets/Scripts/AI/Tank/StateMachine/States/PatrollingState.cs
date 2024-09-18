@@ -26,7 +26,10 @@ namespace CE6127.Tanks.AI
             m_TankSM.SetStopDistanceToZero();
 
             AssignRandomSection();  // 分配坦克的巡逻区域
-            patrolCoroutine = m_TankSM.StartCoroutine(Patrolling());  // 开始巡逻
+            if (patrolCoroutine != null)
+            {
+                patrolCoroutine = m_TankSM.StartCoroutine(Patrolling());  // 开始巡逻
+            }
         }
 
         // 随机分配巡逻区域
@@ -119,13 +122,18 @@ namespace CE6127.Tanks.AI
         public override void Exit()
         {
             base.Exit();
-            m_TankSM.StopCoroutine(patrolCoroutine);
+            if (patrolCoroutine != null)
+            {
+                m_TankSM.StopCoroutine(patrolCoroutine);
+                patrolCoroutine = null;
+            }
         }
 
         IEnumerator Patrolling()
         {
             while (true)
             {
+                Debug.Log("PatrollingState Coroutine Patrolling Called");
                 // 如果有玩家则追踪玩家
                 if (m_TankSM.Target != null)
                 {

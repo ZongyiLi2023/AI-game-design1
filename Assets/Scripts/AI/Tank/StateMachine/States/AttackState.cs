@@ -15,10 +15,12 @@ namespace CE6127.Tanks.AI
     {
         private TankSM m_TankSM;        // Reference to the tank state machine.
         private Coroutine fireCoroutine; // Reference to the firing coroutine.
+        private Coroutine navigateCoroutine; // Reference to the navigation coroutine.
+        private Coroutine triangleFormationCoroutine; // Reference to the triangle formation coroutine.
         private bool isDodging;         // Indicates if the tank is currently dodging an obstacle.
         private const float RaycastDistance = 5f; // Distance for obstacle detection.
 
-
+        private Vector3? dest = null;    // 暂存导航目的地
 
         private object tankHealthInstance;  // 保存TankHealth实例
         private FieldInfo currentHealthField; // 保存反射获取的m_CurrentHealth字段
@@ -132,6 +134,14 @@ namespace CE6127.Tanks.AI
             {
                 fireCoroutine = m_TankSM.StartCoroutine(FireAtTarget());
             }
+            if (navigateCoroutine == null)
+            {
+                navigateCoroutine = m_TankSM.StartCoroutine(ApplyNavigateDestination());
+            }
+            if (triangleFormationCoroutine == null)
+            {
+                triangleFormationCoroutine = m_TankSM.StartCoroutine(UpdateFormation());
+            }
         }
 
         /// <summary>
@@ -140,6 +150,7 @@ namespace CE6127.Tanks.AI
         public override void Update()
         {
             base.Update();
+            // Debug.Log("AttackState Update");
 
             // 获取当前所有坦克的目的地
             if (tanksInAttackState.Count == 3)
@@ -167,6 +178,12 @@ namespace CE6127.Tanks.AI
                         m_TankSM.StopCoroutine(fireCoroutine);
                         fireCoroutine = null;
                     }
+                    if (navigateCoroutine != null)
+                    {
+                        m_TankSM.StopCoroutine(navigateCoroutine);
+                        navigateCoroutine = null;
+                        dest = null;
+                    }
                     return;
                 }
             }
@@ -188,7 +205,7 @@ namespace CE6127.Tanks.AI
                 else
                 {
                     // Detect obstacles using raycasting
-                    if (DetectObstacle())
+                    if (false)
                     {
                         // If an obstacle is detected, start dodging
                         if (!isDodging)
@@ -206,7 +223,7 @@ namespace CE6127.Tanks.AI
                     else
                     {
                         // If no obstacles, stop dodging and resume normal attack behavior
-                        if (isDodging)
+                        /*if (isDodging)
                         {
                             isDodging = false;
                             // Resume shooting
@@ -214,7 +231,7 @@ namespace CE6127.Tanks.AI
                             {
                                 fireCoroutine = m_TankSM.StartCoroutine(FireAtTarget());
                             }
-                        }
+                        }*/
                         // turn the tank to face the target
                         Vector3 directionToTarget = m_TankSM.Target.position - m_TankSM.transform.position;
                         directionToTarget.y = 0; // Ignore the y-axis for rotation
@@ -258,6 +275,17 @@ namespace CE6127.Tanks.AI
                 m_TankSM.StopCoroutine(fireCoroutine);
                 fireCoroutine = null;
             }
+            // Stop the other coroutine
+            if (navigateCoroutine != null)
+            {
+                m_TankSM.StopCoroutine(navigateCoroutine);
+                navigateCoroutine = null;
+            }
+            if (triangleFormationCoroutine != null)
+            {
+                m_TankSM.StopCoroutine(triangleFormationCoroutine);
+                triangleFormationCoroutine = null;
+            }
         }
 
         private void AssignTriangleFormation()
@@ -268,7 +296,7 @@ namespace CE6127.Tanks.AI
                 return;
             }
 
-            Debug.Log("Assigning triangle formation...");
+            // Debug.Log("Assigning triangle formation...");
 
             // 选定第一个坦克作为队形的中心
             TankSM centerTank = tanksInAttackState[0];
@@ -293,20 +321,49 @@ namespace CE6127.Tanks.AI
             tankPositionsText.text = $"Tank 1 Destination: {destination1}\nTank 2 Destination: {destination2}\nTank 3 Destination: {destination3}";
 
             // 分配位置并打印调试信息
-            tanksInAttackState[0].NavMeshAgent.SetDestination(pos1);
-            Debug.Log($"Tank {tanksInAttackState[0].name} moving to position {pos1}");
-            tanksInAttackState[1].NavMeshAgent.SetDestination(pos2);
-            Debug.Log($"Tank {tanksInAttackState[1].name} moving to position {pos2}");
-            tanksInAttackState[2].NavMeshAgent.SetDestination(pos3);
-            Debug.Log($"Tank {tanksInAttackState[2].name} moving to position {pos3}");
+            // tanksInAttackState[0].NavMeshAgent.SetDestination(pos1);
+            tanksInAttackState[0].m_States.Attack.dest = pos1;
+            // Debug.Log($"Tank {tanksInAttackState[0].name} moving to position {pos1}");
+            // tanksInAttackState[1].NavMeshAgent.SetDestination(pos2);
+            tanksInAttackState[1].m_States.Attack.dest = pos2;
+            // Debug.Log($"Tank {tanksInAttackState[1].name} moving to position {pos2}");
+            // tanksInAttackState[2].NavMeshAgent.SetDestination(pos3);
+            tanksInAttackState[2].m_States.Attack.dest = pos3;
+            // Debug.Log($"Tank {tanksInAttackState[2].name} moving to position {pos3}");
 
             // 输出最终结果
-            Debug.Log("Triangle formation assigned successfully.");
+            // Debug.Log("Triangle formation assigned successfully.");
 
             // // 更新UI文本，显示坦克的位置
             // tankPositionsText.text = $"Tank 1 Position: {pos1}\nTank 2 Position: {pos2}\nTank 3 Position: {pos3}";
             // 更新UI文本，显示新的目的地
             tankPositionsText.text = $"Tank 1 Destination: {pos1}\nTank 2 Destination: {pos2}\nTank 3 Destination: {pos3}";
+        }
+
+        private IEnumerator UpdateFormation()
+        {
+            while (true)
+            {
+                // Debug.Log("AttackState Coroutine UpdateFormation Called");
+                AssignTriangleFormation();
+                float waitInSec = 0.5f;
+                yield return new WaitForSeconds(waitInSec);
+            }
+        }
+
+        private IEnumerator ApplyNavigateDestination()
+        {
+            while (true)
+            {
+                // Debug.Log("AttackState Coroutine ApplyNavigateDestination Called");
+                if (dest is Vector3 destvalue)
+                {
+                    m_TankSM.NavMeshAgent.SetDestination(destvalue);
+                    dest = null;
+                }
+                float waitInSec = 0.2f;
+                yield return new WaitForSeconds(waitInSec);
+            }
         }
 
 
@@ -322,23 +379,25 @@ namespace CE6127.Tanks.AI
 
             while (true)
             {
+                // Debug.Log("AttackState Coroutine FireAtTarget Called");
                 // Make sure the tank faces the target before firing
-                if (m_TankSM.Target != null)
+                if (m_TankSM.Target != null && !DetectObstacle())
                 {
                     Vector3 directionToTarget = m_TankSM.Target.position - m_TankSM.transform.position;
                     directionToTarget.y = 0; // Ignore the y-axis for rotation
 
                     // Move towards the target if the distance is greater than the stop distance
                     float distanceToTarget = Vector3.Distance(m_TankSM.transform.position, m_TankSM.Target.position);
-                    if (distanceToTarget > m_TankSM.StopDistance)
+                    /* if (distanceToTarget > m_TankSM.StopDistance)
                     {
                         m_TankSM.NavMeshAgent.SetDestination(m_TankSM.Target.position);
                     }
                     else
                     {
                         // Stop the tank if within stopping distance
-                        m_TankSM.NavMeshAgent.ResetPath();
-                    }
+                        Debug.Log("Stopping the tank.");
+                        // m_TankSM.NavMeshAgent.ResetPath();
+                    } */
 
                     // Once the tank is facing the target, calculate the required launch force
                     float gravity = Mathf.Abs(Physics.gravity.y);
@@ -354,7 +413,7 @@ namespace CE6127.Tanks.AI
                     launchForce = Mathf.Clamp(launchForce, m_TankSM.LaunchForceMinMax.x, m_TankSM.LaunchForceMinMax.y);
 
                     m_TankSM.LaunchProjectile(launchForce);
-                    Debug.Log("force: " + launchForce);
+                    // Debug.Log("force: " + launchForce);
                 }
 
                 // Use the cooldown time from TankSM's FireInterval
@@ -410,7 +469,8 @@ namespace CE6127.Tanks.AI
 
             // Set a new destination to dodge to
             Vector3 dodgeDestination = m_TankSM.transform.position + dodgeDirection * 20f; // Adjust the dodge distance as needed
-            m_TankSM.NavMeshAgent.SetDestination(dodgeDestination);
+            // m_TankSM.NavMeshAgent.SetDestination(dodgeDestination);
+            dest = dodgeDestination;
         }
 
 
