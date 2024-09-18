@@ -26,14 +26,9 @@ namespace CE6127.Tanks.AI
 
 
 
-        private static List<Vector3> availablePositions = new List<Vector3>(); // 存储可用的位置
-        private static Dictionary<int, Vector3> occupiedPositions = new Dictionary<int, Vector3>(); // 存储已占用的位置
-        private static List<int> usedTankIndices = new List<int>(); // 存储已分配的索引
-        private static readonly object indexLock = new object();
-
-        private int tankIndex;
-        private Vector3 assignedPosition; // 该坦克分配的位置
-        private const float FormationRadius = 5f;
+        private static List<TankSM> tanksInAttackState = new List<TankSM>(); // 追踪所有进入 AttackState 的坦克
+        private const float TriangleSideLength = 10f;  // 三角形的边长
+        private static readonly object stateLock = new object(); // 防止并发问题
 
 
         /// <summary>
@@ -54,12 +49,26 @@ namespace CE6127.Tanks.AI
             base.Enter();
             m_TankSM.SetStopDistanceToTarget(); // Ensure the tank stops at the correct distance from the target
 
+            Debug.Log($"Tank {m_TankSM.name} is entering AttackState");
+        
+            lock (stateLock)
+            {
+                if (!tanksInAttackState.Contains(m_TankSM)) // 确保不会重复加入
+                {
+                    tanksInAttackState.Add(m_TankSM);
+                    Debug.Log($"Tank {m_TankSM.name} entered AttackState, total tanks: {tanksInAttackState.Count}");
 
-            // 为坦克分配队形编号，确保不重复
-            AssignTankIndex();
-
-            Debug.Log($"Tank {m_TankSM.name} assigned index: {tankIndex}");
-
+                    // 当三个坦克都进入攻击状态后，计算队形
+                    if (tanksInAttackState.Count == 3)
+                    {
+                        AssignTriangleFormation();
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning($"Tank {m_TankSM.name} already in AttackState.");
+                }
+            }
 
             // 使用反射获取 TankHealth 实例
             var tankHealthType = typeof(TankHealth);
@@ -113,22 +122,12 @@ namespace CE6127.Tanks.AI
                 }
             }
 
-            // 每帧更新三个围绕玩家的坐标
-            UpdateAvailablePositions(m_TankSM.Target.position);
+
 
             // Check if the target is still within range
             if (m_TankSM.Target != null)
             {
                 Vector3 playerPosition = m_TankSM.Target.position;
-
-                // 计算坦克相对玩家的位置
-                Vector3 relativePosition = CalculatePositionAroundPlayer(playerPosition, tankIndex);
-
-                // 让坦克移动到计算出的相对位置
-                m_TankSM.NavMeshAgent.SetDestination(relativePosition);
-
-
-
 
 
                 float distance = Vector3.Distance(m_TankSM.transform.position, m_TankSM.Target.position);
@@ -179,66 +178,6 @@ namespace CE6127.Tanks.AI
                 }
             }
         }
-        private void AssignTankIndex()
-        {
-            lock (indexLock)
-            {
-                UpdateAvailablePositions(m_TankSM.Target.position); // 更新坦克周围的可用位置
-                Debug.Log($"Available positions before assignment: {string.Join(",", availablePositions)}");
-
-                // 查找未使用的编号，确保每个坦克分配到不同的位置
-                for (int i = 0; i < availablePositions.Count; i++)
-                {
-                    if (!usedTankIndices.Contains(i))
-                    {
-                        tankIndex = i;
-                        assignedPosition = availablePositions[i]; // 分配该位置
-                        occupiedPositions[tankIndex] = assignedPosition; // 标记为已占用
-                        usedTankIndices.Add(i); // 记录已使用的编号
-                        break;
-                    }
-                }
-
-                Debug.Log($"Used indices after assignment: {string.Join(",", usedTankIndices)}");
-            }
-        }
-
-        // private void UpdateAvailablePositions(Vector3 playerPosition)
-        // {
-        //     availablePositions.Clear(); // 清空可用位置
-        //     for (int i = 0; i < 3; i++) // 计算三个位置
-        //     {
-        //         float angle = i * 120f;
-        //         float radians = angle * Mathf.Deg2Rad;
-        //         float xOffset = FormationRadius * Mathf.Cos(radians);
-        //         float zOffset = FormationRadius * Mathf.Sin(radians);
-        //         Vector3 position = new Vector3(playerPosition.x + xOffset, playerPosition.y, playerPosition.z + zOffset);
-
-        //         if (!occupiedPositions.ContainsValue(position)) // 只将未占用的位置加入可用列表
-        //         {
-        //             availablePositions.Add(position);
-        //         }
-        //     }
-        // }
-
-        private void UpdateAvailablePositions(Vector3 playerPosition)
-        {
-            // 这里不再清空 availablePositions，而是只更新已释放的位置
-            for (int i = 0; i < 3; i++)
-            {
-                float angle = i * 120f;
-                float radians = angle * Mathf.Deg2Rad;
-                float xOffset = FormationRadius * Mathf.Cos(radians);
-                float zOffset = FormationRadius * Mathf.Sin(radians);
-                Vector3 position = new Vector3(playerPosition.x + xOffset, playerPosition.y, playerPosition.z + zOffset);
-
-                // 如果该位置没有被占用，且未在已分配的位置中，加入到可用列表
-                if (!occupiedPositions.ContainsValue(position) && !availablePositions.Contains(position))
-                {
-                    availablePositions.Add(position);
-                }
-            }
-        }
 
 
 
@@ -249,11 +188,20 @@ namespace CE6127.Tanks.AI
         public override void Exit()
         {
             base.Exit();
-            lock (indexLock)
+
+            lock (stateLock)
             {
-                usedTankIndices.Remove(tankIndex); // 移除坦克的索引
-                occupiedPositions.Remove(tankIndex); // 释放该位置
+                if (tanksInAttackState.Contains(m_TankSM))
+                {
+                    tanksInAttackState.Remove(m_TankSM);
+                    Debug.Log($"Tank {m_TankSM.name} exited AttackState, remaining tanks: {tanksInAttackState.Count}");
+                }
+                else
+                {
+                    Debug.LogWarning($"Tank {m_TankSM.name} was not found in AttackState list.");
+                }
             }
+
 
             // Stop the firing coroutine
             if (fireCoroutine != null)
@@ -262,6 +210,44 @@ namespace CE6127.Tanks.AI
                 fireCoroutine = null;
             }
         }
+
+        private void AssignTriangleFormation()
+        {
+            if (tanksInAttackState.Count < 3)
+            {
+                Debug.LogWarning("Not enough tanks in AttackState to form a triangle.");
+                return;
+            }
+
+            Debug.Log("Assigning triangle formation...");
+
+            // 选定第一个坦克作为队形的中心
+            TankSM centerTank = tanksInAttackState[0];
+            Vector3 centerPosition = centerTank.transform.position;
+
+            Debug.Log($"Center tank position: {centerPosition}");
+
+            // 计算第二和第三个坦克的位置（形成一个等边三角形）
+            Vector3 pos1 = centerPosition + new Vector3(TriangleSideLength, 0, 0); // 右边
+            Vector3 pos2 = centerPosition + new Vector3(-TriangleSideLength / 2, 0, Mathf.Sqrt(3) * TriangleSideLength / 2); // 左上
+            Vector3 pos3 = centerPosition + new Vector3(-TriangleSideLength / 2, 0, -Mathf.Sqrt(3) * TriangleSideLength / 2); // 左下
+
+            // 输出每个计算出的目标位置
+            Debug.Log($"Position 1: {pos1}, Position 2: {pos2}, Position 3: {pos3}");
+
+            // 分配位置并打印调试信息
+            tanksInAttackState[0].NavMeshAgent.SetDestination(pos1);
+            Debug.Log($"Tank {tanksInAttackState[0].name} moving to position {pos1}");
+            tanksInAttackState[1].NavMeshAgent.SetDestination(pos2);
+            Debug.Log($"Tank {tanksInAttackState[1].name} moving to position {pos2}");
+            tanksInAttackState[2].NavMeshAgent.SetDestination(pos3);
+            Debug.Log($"Tank {tanksInAttackState[2].name} moving to position {pos3}");
+
+            // 输出最终结果
+            Debug.Log("Triangle formation assigned successfully.");
+        }
+
+
 
         /// <summary>
         /// Coroutine <c>FireAtTarget</c> handles the tank's firing behavior while in the AttackState.
@@ -366,19 +352,7 @@ namespace CE6127.Tanks.AI
         }
 
 
-        private Vector3 CalculatePositionAroundPlayer(Vector3 playerPosition, int tankIndex)
-        {
-            // 计算每个坦克的角度，分别为0度、120度、240度
-            float angle = tankIndex * 120f;
-            float radians = angle * Mathf.Deg2Rad;
 
-            // 使用队形半径计算坦克相对玩家的位置
-            float xOffset = FormationRadius * Mathf.Cos(radians);
-            float zOffset = FormationRadius * Mathf.Sin(radians);
-
-            // 返回相对位置
-            return new Vector3(playerPosition.x + xOffset, playerPosition.y, playerPosition.z + zOffset);
-        }
 
     }
 }
