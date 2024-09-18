@@ -10,7 +10,7 @@ namespace CE6127.Tanks.AI
         private Quaternion targetRotation;  // 目标旋转方向
         private bool isFleeing = false;  // 标记是否已经开始逃跑
         private float fleeTimer = 0f;  // 逃跑的时间计时器
-        private const float fleeDuration = 6f;  // 逃跑持续时间 6 秒
+        private const float fleeDuration = 3f;  // 逃跑持续时间 6 秒
 
         public FleeState(TankSM tankStateMachine) : base("Flee", tankStateMachine)
         {

@@ -1,4 +1,4 @@
-﻿using System.Collections;
+﻿﻿using System.Collections;
 using UnityEngine;
 using Random = UnityEngine.Random;
 using System.Reflection;
@@ -15,10 +15,9 @@ namespace CE6127.Tanks.AI
     {
         private TankSM m_TankSM;        // Reference to the tank state machine.
         private Coroutine fireCoroutine; // Reference to the firing coroutine.
+        private Coroutine triangleFormationCoroutine; // Reference to the triangle formation coroutine.
         private bool isDodging;         // Indicates if the tank is currently dodging an obstacle.
         private const float RaycastDistance = 5f; // Distance for obstacle detection.
-
-
 
         private object tankHealthInstance;  // 保存TankHealth实例
         private FieldInfo currentHealthField; // 保存反射获取的m_CurrentHealth字段
@@ -50,34 +49,31 @@ namespace CE6127.Tanks.AI
                 return;
             }
 
-            // 检查是否已经有Text对象，避免重复创建
-            GameObject existingTextObj = GameObject.Find("DynamicTankPositionsText");
-            if (existingTextObj == null)
+            // 动态创建Text对象
+            GameObject newTextObj = new GameObject("DynamicTankPositionsText");
+            tankPositionsText = newTextObj.AddComponent<Text>();
+
+            // 检查是否成功创建Text组件
+            if (tankPositionsText == null)
             {
-                // 动态创建Text对象
-                GameObject newTextObj = new GameObject("DynamicTankPositionsText");
-                tankPositionsText = newTextObj.AddComponent<Text>();
-
-                // 设置Text的基本属性
-                tankPositionsText.text = " ";
-                tankPositionsText.font = Font.CreateDynamicFontFromOSFont("Arial", 24); // 使用系统默认字体
-                tankPositionsText.fontSize = 24;
-                tankPositionsText.color = Color.white;
-                tankPositionsText.alignment = TextAnchor.UpperLeft;
-
-                // 将Text对象作为子对象附加到Canvas
-                newTextObj.transform.SetParent(uiCanvas.transform, false);
-
-                // 设置RectTransform
-                RectTransform rectTransform = newTextObj.GetComponent<RectTransform>();
-                rectTransform.anchoredPosition = new Vector2(0, 0);
-                rectTransform.sizeDelta = new Vector2(800, 400);
+                Debug.LogError("Failed to create Text component!");
+                return;
             }
-            else
-            {
-                // 如果Text对象已经存在，获取已有的Text组件
-                tankPositionsText = existingTextObj.GetComponent<Text>();
-            }
+
+            // 设置Text的基本属性
+            tankPositionsText.text = " ";
+            tankPositionsText.font = Font.CreateDynamicFontFromOSFont("Arial", 24); // 使用系统默认字体
+            tankPositionsText.fontSize = 24;
+            tankPositionsText.color = Color.white;
+            tankPositionsText.alignment = TextAnchor.UpperLeft;
+
+            // 将Text对象作为子对象附加到Canvas
+            newTextObj.transform.SetParent(uiCanvas.transform, false);
+
+            // 设置RectTransform
+            RectTransform rectTransform = newTextObj.GetComponent<RectTransform>();
+            rectTransform.anchoredPosition = new Vector2(0, 0);
+            rectTransform.sizeDelta = new Vector2(800, 400);
 
 
         }
@@ -88,7 +84,8 @@ namespace CE6127.Tanks.AI
         public override void Enter()
         {
             base.Enter();
-            m_TankSM.SetStopDistanceToTarget(); // Ensure the tank stops at the correct distance from the target
+            // m_TankSM.SetStopDistanceToTarget(); // Ensure the tank stops at the correct distance from the target
+            m_TankSM.SetStopDistanceToZero(); // Ensure the tank stops at the correct distance from the target
 
             Debug.Log($"Tank {m_TankSM.name} is entering AttackState");
 
@@ -122,6 +119,7 @@ namespace CE6127.Tanks.AI
 
                 // 获取最大血量，直接访问公开的 StartingHealth 字段
                 maxHealth = (float)tankHealthType.GetField("StartingHealth").GetValue(tankHealthInstance);
+                Debug.Log("get the health of the tank");
             }
             else
             {
@@ -131,10 +129,18 @@ namespace CE6127.Tanks.AI
 
 
             // Start the firing coroutine only if it's not already running
-            if (fireCoroutine == null)
+            if (fireCoroutine != null)
             {
-                fireCoroutine = m_TankSM.StartCoroutine(FireAtTarget());
+                m_TankSM.StopCoroutine(fireCoroutine);
+                fireCoroutine = null;
             }
+            fireCoroutine = m_TankSM.StartCoroutine(FireAtTarget());
+
+            if (triangleFormationCoroutine != null)
+            {
+                m_TankSM.StopCoroutine(triangleFormationCoroutine);
+            }
+            triangleFormationCoroutine = m_TankSM.StartCoroutine(UpdateFormation());
         }
 
         /// <summary>
@@ -143,6 +149,7 @@ namespace CE6127.Tanks.AI
         public override void Update()
         {
             base.Update();
+            // Debug.Log("AttackState Update");
 
             // 获取当前所有坦克的目的地
             if (tanksInAttackState.Count == 3)
@@ -160,16 +167,25 @@ namespace CE6127.Tanks.AI
             {
                 // 每帧通过反射获取当前血量
                 float currentHealth = (float)currentHealthField.GetValue(tankHealthInstance);
+                //Debug.Log("the health can be got");
 
-                // 检查血量是否小于最大血量的三分之一
-                if (currentHealth <= maxHealth / 3)
+                // 检查血量是否小于最大血量的8/9
+                if (currentHealth <= maxHealth* 9 / 10)
                 {
+                    Debug.Log("change to flee state");
                     m_StateMachine.ChangeState(new FleeState(m_TankSM));
+                    
                     if (fireCoroutine != null)
                     {
                         m_TankSM.StopCoroutine(fireCoroutine);
                         fireCoroutine = null;
                     }
+                    /*if (navigateCoroutine != null)
+                    {
+                        m_TankSM.StopCoroutine(navigateCoroutine);
+                        navigateCoroutine = null;
+                        dest = null;
+                    }*/
                     return;
                 }
             }
@@ -190,8 +206,15 @@ namespace CE6127.Tanks.AI
                 }
                 else
                 {
+                    Vector3 directionToTarget = m_TankSM.Target.position - m_TankSM.transform.position;
+                    directionToTarget.y = 0; // Ignore the y-axis for rotation
+                    Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
+                    // Smoothly rotate the tank towards the target, using the OrientSlerpScalar for interpolation
+                    float rotationSpeed = m_TankSM.OrientSlerpScalar * m_TankSM.NavMeshAgent.angularSpeed;
+                    // rotate the tank but subject to the rotation speed
+                    m_TankSM.transform.rotation = Quaternion.Slerp(m_TankSM.transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
                     // Detect obstacles using raycasting
-                    if (DetectObstacle())
+                    if (false)
                     {
                         // If an obstacle is detected, start dodging
                         if (!isDodging)
@@ -209,7 +232,7 @@ namespace CE6127.Tanks.AI
                     else
                     {
                         // If no obstacles, stop dodging and resume normal attack behavior
-                        if (isDodging)
+                        /*if (isDodging)
                         {
                             isDodging = false;
                             // Resume shooting
@@ -217,15 +240,9 @@ namespace CE6127.Tanks.AI
                             {
                                 fireCoroutine = m_TankSM.StartCoroutine(FireAtTarget());
                             }
-                        }
+                        }*/
                         // turn the tank to face the target
-                        Vector3 directionToTarget = m_TankSM.Target.position - m_TankSM.transform.position;
-                        directionToTarget.y = 0; // Ignore the y-axis for rotation
-                        Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
-                        // Smoothly rotate the tank towards the target, using the OrientSlerpScalar for interpolation
-                        float rotationSpeed = m_TankSM.OrientSlerpScalar * m_TankSM.NavMeshAgent.angularSpeed;
-                        // rotate the tank but subject to the rotation speed
-                        m_TankSM.transform.rotation = Quaternion.Slerp(m_TankSM.transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+                        
                     }
                 }
             }
@@ -261,6 +278,12 @@ namespace CE6127.Tanks.AI
                 m_TankSM.StopCoroutine(fireCoroutine);
                 fireCoroutine = null;
             }
+            // Stop the formation coroutine
+            if (triangleFormationCoroutine != null)
+            {
+                m_TankSM.StopCoroutine(triangleFormationCoroutine);
+                triangleFormationCoroutine = null;
+            }
         }
 
         private void AssignTriangleFormation()
@@ -271,11 +294,11 @@ namespace CE6127.Tanks.AI
                 return;
             }
 
-            Debug.Log("Assigning triangle formation...");
+            // Debug.Log("Assigning triangle formation...");
 
             // 选定第一个坦克作为队形的中心
-            TankSM centerTank = tanksInAttackState[0];
-            Vector3 centerPosition = centerTank.transform.position;
+            // TankSM centerTank = tanksInAttackState[0];
+            Vector3 centerPosition = m_TankSM.Target.position;
 
             Debug.Log($"Center tank position: {centerPosition}");
 
@@ -297,14 +320,17 @@ namespace CE6127.Tanks.AI
 
             // 分配位置并打印调试信息
             tanksInAttackState[0].NavMeshAgent.SetDestination(pos1);
-            Debug.Log($"Tank {tanksInAttackState[0].name} moving to position {pos1}");
+            // tanksInAttackState[0].m_States.Attack.dest = pos1;
+            // Debug.Log($"Tank {tanksInAttackState[0].name} moving to position {pos1}");
             tanksInAttackState[1].NavMeshAgent.SetDestination(pos2);
-            Debug.Log($"Tank {tanksInAttackState[1].name} moving to position {pos2}");
+            // tanksInAttackState[1].m_States.Attack.dest = pos2;
+            // Debug.Log($"Tank {tanksInAttackState[1].name} moving to position {pos2}");
             tanksInAttackState[2].NavMeshAgent.SetDestination(pos3);
-            Debug.Log($"Tank {tanksInAttackState[2].name} moving to position {pos3}");
+            // tanksInAttackState[2].m_States.Attack.dest = pos3;
+            // Debug.Log($"Tank {tanksInAttackState[2].name} moving to position {pos3}");
 
             // 输出最终结果
-            Debug.Log("Triangle formation assigned successfully.");
+            // Debug.Log("Triangle formation assigned successfully.");
 
             // // 更新UI文本，显示坦克的位置
             // tankPositionsText.text = $"Tank 1 Position: {pos1}\nTank 2 Position: {pos2}\nTank 3 Position: {pos3}";
@@ -312,6 +338,34 @@ namespace CE6127.Tanks.AI
             tankPositionsText.text = $"Tank 1 Destination: {pos1}\nTank 2 Destination: {pos2}\nTank 3 Destination: {pos3}";
         }
 
+        private IEnumerator UpdateFormation()
+        {
+            while (true)
+            {
+                // Debug.Log("AttackState Coroutine UpdateFormation Called");
+                AssignTriangleFormation();
+                float waitInSec = 0.5f;
+                yield return new WaitForSeconds(waitInSec);
+            }
+        }
+
+/*
+        private IEnumerator ApplyNavigateDestination()
+        {
+            while (true)
+            {
+                // Debug.Log("AttackState Coroutine ApplyNavigateDestination Called");
+                if (dest is Vector3 destvalue)
+                {
+                    Debug.Log($"Tank {m_TankSM.name} moving to position {destvalue}");
+                    m_TankSM.NavMeshAgent.SetDestination(destvalue);
+                    dest = null;
+                }
+                float waitInSec = 0.1f;
+                yield return new WaitForSeconds(waitInSec);
+            }
+        }
+*/
 
 
         /// <summary>
@@ -325,23 +379,25 @@ namespace CE6127.Tanks.AI
 
             while (true)
             {
+                // Debug.Log("AttackState Coroutine FireAtTarget Called");
                 // Make sure the tank faces the target before firing
-                if (m_TankSM.Target != null)
+                if (m_TankSM.Target != null && !DetectObstacle())
                 {
                     Vector3 directionToTarget = m_TankSM.Target.position - m_TankSM.transform.position;
                     directionToTarget.y = 0; // Ignore the y-axis for rotation
 
                     // Move towards the target if the distance is greater than the stop distance
                     float distanceToTarget = Vector3.Distance(m_TankSM.transform.position, m_TankSM.Target.position);
-                    if (distanceToTarget > m_TankSM.StopDistance)
+                    /* if (distanceToTarget > m_TankSM.StopDistance)
                     {
                         m_TankSM.NavMeshAgent.SetDestination(m_TankSM.Target.position);
                     }
                     else
                     {
                         // Stop the tank if within stopping distance
-                        m_TankSM.NavMeshAgent.ResetPath();
-                    }
+                        Debug.Log("Stopping the tank.");
+                        // m_TankSM.NavMeshAgent.ResetPath();
+                    } */
 
                     // Once the tank is facing the target, calculate the required launch force
                     float gravity = Mathf.Abs(Physics.gravity.y);
@@ -357,7 +413,7 @@ namespace CE6127.Tanks.AI
                     launchForce = Mathf.Clamp(launchForce, m_TankSM.LaunchForceMinMax.x, m_TankSM.LaunchForceMinMax.y);
 
                     m_TankSM.LaunchProjectile(launchForce);
-                    Debug.Log("force: " + launchForce);
+                    // Debug.Log("force: " + launchForce);
                 }
 
                 // Use the cooldown time from TankSM's FireInterval
@@ -414,6 +470,7 @@ namespace CE6127.Tanks.AI
             // Set a new destination to dodge to
             Vector3 dodgeDestination = m_TankSM.transform.position + dodgeDirection * 20f; // Adjust the dodge distance as needed
             m_TankSM.NavMeshAgent.SetDestination(dodgeDestination);
+            // dest = dodgeDestination;
         }
 
 
