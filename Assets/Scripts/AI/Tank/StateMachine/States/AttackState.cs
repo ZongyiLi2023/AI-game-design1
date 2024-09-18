@@ -1,7 +1,9 @@
-﻿using System.Collections;
+﻿
+using System.Collections;
 using UnityEngine;
 using Random = UnityEngine.Random;
 using System.Reflection;
+using System.Collections.Generic;
 
 
 namespace CE6127.Tanks.AI
@@ -24,9 +26,14 @@ namespace CE6127.Tanks.AI
 
 
 
-        private int tankIndex;     // 坦克的编号，用于队形分配
-        private const float FormationRadius = 5f; // 队形的半径
-        private static int tankCount = 0; // 追踪当前有多少坦克进入状态
+        private static List<Vector3> availablePositions = new List<Vector3>(); // 存储可用的位置
+        private static Dictionary<int, Vector3> occupiedPositions = new Dictionary<int, Vector3>(); // 存储已占用的位置
+        private static List<int> usedTankIndices = new List<int>(); // 存储已分配的索引
+        private static readonly object indexLock = new object();
+
+        private int tankIndex;
+        private Vector3 assignedPosition; // 该坦克分配的位置
+        private const float FormationRadius = 5f;
 
 
         /// <summary>
@@ -48,9 +55,10 @@ namespace CE6127.Tanks.AI
             m_TankSM.SetStopDistanceToTarget(); // Ensure the tank stops at the correct distance from the target
 
 
-            // 为坦克分配队形编号
-            tankIndex = tankCount % 3; // 分配编号 0, 1, 2
-            tankCount++;
+            // 为坦克分配队形编号，确保不重复
+            AssignTankIndex();
+
+            Debug.Log($"Tank {m_TankSM.name} assigned index: {tankIndex}");
 
 
             // 使用反射获取 TankHealth 实例
@@ -104,6 +112,9 @@ namespace CE6127.Tanks.AI
                     return;
                 }
             }
+
+            // 每帧更新三个围绕玩家的坐标
+            UpdateAvailablePositions(m_TankSM.Target.position);
 
             // Check if the target is still within range
             if (m_TankSM.Target != null)
@@ -168,6 +179,69 @@ namespace CE6127.Tanks.AI
                 }
             }
         }
+        private void AssignTankIndex()
+        {
+            lock (indexLock)
+            {
+                UpdateAvailablePositions(m_TankSM.Target.position); // 更新坦克周围的可用位置
+                Debug.Log($"Available positions before assignment: {string.Join(",", availablePositions)}");
+
+                // 查找未使用的编号，确保每个坦克分配到不同的位置
+                for (int i = 0; i < availablePositions.Count; i++)
+                {
+                    if (!usedTankIndices.Contains(i))
+                    {
+                        tankIndex = i;
+                        assignedPosition = availablePositions[i]; // 分配该位置
+                        occupiedPositions[tankIndex] = assignedPosition; // 标记为已占用
+                        usedTankIndices.Add(i); // 记录已使用的编号
+                        break;
+                    }
+                }
+
+                Debug.Log($"Used indices after assignment: {string.Join(",", usedTankIndices)}");
+            }
+        }
+
+        // private void UpdateAvailablePositions(Vector3 playerPosition)
+        // {
+        //     availablePositions.Clear(); // 清空可用位置
+        //     for (int i = 0; i < 3; i++) // 计算三个位置
+        //     {
+        //         float angle = i * 120f;
+        //         float radians = angle * Mathf.Deg2Rad;
+        //         float xOffset = FormationRadius * Mathf.Cos(radians);
+        //         float zOffset = FormationRadius * Mathf.Sin(radians);
+        //         Vector3 position = new Vector3(playerPosition.x + xOffset, playerPosition.y, playerPosition.z + zOffset);
+
+        //         if (!occupiedPositions.ContainsValue(position)) // 只将未占用的位置加入可用列表
+        //         {
+        //             availablePositions.Add(position);
+        //         }
+        //     }
+        // }
+
+        private void UpdateAvailablePositions(Vector3 playerPosition)
+        {
+            // 这里不再清空 availablePositions，而是只更新已释放的位置
+            for (int i = 0; i < 3; i++)
+            {
+                float angle = i * 120f;
+                float radians = angle * Mathf.Deg2Rad;
+                float xOffset = FormationRadius * Mathf.Cos(radians);
+                float zOffset = FormationRadius * Mathf.Sin(radians);
+                Vector3 position = new Vector3(playerPosition.x + xOffset, playerPosition.y, playerPosition.z + zOffset);
+
+                // 如果该位置没有被占用，且未在已分配的位置中，加入到可用列表
+                if (!occupiedPositions.ContainsValue(position) && !availablePositions.Contains(position))
+                {
+                    availablePositions.Add(position);
+                }
+            }
+        }
+
+
+
 
         /// <summary>
         /// Method <c>Exit</c> is called when exiting the state.
@@ -175,6 +249,11 @@ namespace CE6127.Tanks.AI
         public override void Exit()
         {
             base.Exit();
+            lock (indexLock)
+            {
+                usedTankIndices.Remove(tankIndex); // 移除坦克的索引
+                occupiedPositions.Remove(tankIndex); // 释放该位置
+            }
 
             // Stop the firing coroutine
             if (fireCoroutine != null)
