@@ -50,31 +50,34 @@ namespace CE6127.Tanks.AI
                 return;
             }
 
-            // 动态创建Text对象
-            GameObject newTextObj = new GameObject("DynamicTankPositionsText");
-            tankPositionsText = newTextObj.AddComponent<Text>();
-
-            // 检查是否成功创建Text组件
-            if (tankPositionsText == null)
+            // 检查是否已经有Text对象，避免重复创建
+            GameObject existingTextObj = GameObject.Find("DynamicTankPositionsText");
+            if (existingTextObj == null)
             {
-                Debug.LogError("Failed to create Text component!");
-                return;
+                // 动态创建Text对象
+                GameObject newTextObj = new GameObject("DynamicTankPositionsText");
+                tankPositionsText = newTextObj.AddComponent<Text>();
+
+                // 设置Text的基本属性
+                tankPositionsText.text = " ";
+                tankPositionsText.font = Font.CreateDynamicFontFromOSFont("Arial", 24); // 使用系统默认字体
+                tankPositionsText.fontSize = 24;
+                tankPositionsText.color = Color.white;
+                tankPositionsText.alignment = TextAnchor.UpperLeft;
+
+                // 将Text对象作为子对象附加到Canvas
+                newTextObj.transform.SetParent(uiCanvas.transform, false);
+
+                // 设置RectTransform
+                RectTransform rectTransform = newTextObj.GetComponent<RectTransform>();
+                rectTransform.anchoredPosition = new Vector2(0, 0);
+                rectTransform.sizeDelta = new Vector2(800, 400);
             }
-
-            // 设置Text的基本属性
-            tankPositionsText.text = " ";
-            tankPositionsText.font = Font.CreateDynamicFontFromOSFont("Arial", 24); // 使用系统默认字体
-            tankPositionsText.fontSize = 24;
-            tankPositionsText.color = Color.white;
-            tankPositionsText.alignment = TextAnchor.UpperLeft;
-
-            // 将Text对象作为子对象附加到Canvas
-            newTextObj.transform.SetParent(uiCanvas.transform, false);
-
-            // 设置RectTransform
-            RectTransform rectTransform = newTextObj.GetComponent<RectTransform>();
-            rectTransform.anchoredPosition = new Vector2(0, 0);
-            rectTransform.sizeDelta = new Vector2(800, 400);
+            else
+            {
+                // 如果Text对象已经存在，获取已有的Text组件
+                tankPositionsText = existingTextObj.GetComponent<Text>();
+            }
 
 
         }
