@@ -15,12 +15,9 @@ namespace CE6127.Tanks.AI
     {
         private TankSM m_TankSM;        // Reference to the tank state machine.
         private Coroutine fireCoroutine; // Reference to the firing coroutine.
-        private Coroutine navigateCoroutine; // Reference to the navigation coroutine.
         private Coroutine triangleFormationCoroutine; // Reference to the triangle formation coroutine.
         private bool isDodging;         // Indicates if the tank is currently dodging an obstacle.
         private const float RaycastDistance = 5f; // Distance for obstacle detection.
-
-        private Vector3? dest = null;    // 暂存导航目的地
 
         private object tankHealthInstance;  // 保存TankHealth实例
         private FieldInfo currentHealthField; // 保存反射获取的m_CurrentHealth字段
@@ -87,7 +84,8 @@ namespace CE6127.Tanks.AI
         public override void Enter()
         {
             base.Enter();
-            m_TankSM.SetStopDistanceToTarget(); // Ensure the tank stops at the correct distance from the target
+            // m_TankSM.SetStopDistanceToTarget(); // Ensure the tank stops at the correct distance from the target
+            m_TankSM.SetStopDistanceToZero(); // Ensure the tank stops at the correct distance from the target
 
             Debug.Log($"Tank {m_TankSM.name} is entering AttackState");
 
@@ -130,18 +128,18 @@ namespace CE6127.Tanks.AI
 
 
             // Start the firing coroutine only if it's not already running
-            if (fireCoroutine == null)
+            if (fireCoroutine != null)
             {
-                fireCoroutine = m_TankSM.StartCoroutine(FireAtTarget());
+                m_TankSM.StopCoroutine(fireCoroutine);
+                fireCoroutine = null;
             }
-            if (navigateCoroutine == null)
+            fireCoroutine = m_TankSM.StartCoroutine(FireAtTarget());
+
+            if (triangleFormationCoroutine != null)
             {
-                navigateCoroutine = m_TankSM.StartCoroutine(ApplyNavigateDestination());
+                m_TankSM.StopCoroutine(triangleFormationCoroutine);
             }
-            if (triangleFormationCoroutine == null)
-            {
-                triangleFormationCoroutine = m_TankSM.StartCoroutine(UpdateFormation());
-            }
+            triangleFormationCoroutine = m_TankSM.StartCoroutine(UpdateFormation());
         }
 
         /// <summary>
@@ -178,12 +176,12 @@ namespace CE6127.Tanks.AI
                         m_TankSM.StopCoroutine(fireCoroutine);
                         fireCoroutine = null;
                     }
-                    if (navigateCoroutine != null)
+                    /*if (navigateCoroutine != null)
                     {
                         m_TankSM.StopCoroutine(navigateCoroutine);
                         navigateCoroutine = null;
                         dest = null;
-                    }
+                    }*/
                     return;
                 }
             }
@@ -204,6 +202,13 @@ namespace CE6127.Tanks.AI
                 }
                 else
                 {
+                    Vector3 directionToTarget = m_TankSM.Target.position - m_TankSM.transform.position;
+                    directionToTarget.y = 0; // Ignore the y-axis for rotation
+                    Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
+                    // Smoothly rotate the tank towards the target, using the OrientSlerpScalar for interpolation
+                    float rotationSpeed = m_TankSM.OrientSlerpScalar * m_TankSM.NavMeshAgent.angularSpeed;
+                    // rotate the tank but subject to the rotation speed
+                    m_TankSM.transform.rotation = Quaternion.Slerp(m_TankSM.transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
                     // Detect obstacles using raycasting
                     if (false)
                     {
@@ -233,13 +238,7 @@ namespace CE6127.Tanks.AI
                             }
                         }*/
                         // turn the tank to face the target
-                        Vector3 directionToTarget = m_TankSM.Target.position - m_TankSM.transform.position;
-                        directionToTarget.y = 0; // Ignore the y-axis for rotation
-                        Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
-                        // Smoothly rotate the tank towards the target, using the OrientSlerpScalar for interpolation
-                        float rotationSpeed = m_TankSM.OrientSlerpScalar * m_TankSM.NavMeshAgent.angularSpeed;
-                        // rotate the tank but subject to the rotation speed
-                        m_TankSM.transform.rotation = Quaternion.Slerp(m_TankSM.transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+                        
                     }
                 }
             }
@@ -275,12 +274,7 @@ namespace CE6127.Tanks.AI
                 m_TankSM.StopCoroutine(fireCoroutine);
                 fireCoroutine = null;
             }
-            // Stop the other coroutine
-            if (navigateCoroutine != null)
-            {
-                m_TankSM.StopCoroutine(navigateCoroutine);
-                navigateCoroutine = null;
-            }
+            // Stop the formation coroutine
             if (triangleFormationCoroutine != null)
             {
                 m_TankSM.StopCoroutine(triangleFormationCoroutine);
@@ -299,8 +293,8 @@ namespace CE6127.Tanks.AI
             // Debug.Log("Assigning triangle formation...");
 
             // 选定第一个坦克作为队形的中心
-            TankSM centerTank = tanksInAttackState[0];
-            Vector3 centerPosition = centerTank.transform.position;
+            // TankSM centerTank = tanksInAttackState[0];
+            Vector3 centerPosition = m_TankSM.Target.position;
 
             Debug.Log($"Center tank position: {centerPosition}");
 
@@ -321,14 +315,14 @@ namespace CE6127.Tanks.AI
             tankPositionsText.text = $"Tank 1 Destination: {destination1}\nTank 2 Destination: {destination2}\nTank 3 Destination: {destination3}";
 
             // 分配位置并打印调试信息
-            // tanksInAttackState[0].NavMeshAgent.SetDestination(pos1);
-            tanksInAttackState[0].m_States.Attack.dest = pos1;
+            tanksInAttackState[0].NavMeshAgent.SetDestination(pos1);
+            // tanksInAttackState[0].m_States.Attack.dest = pos1;
             // Debug.Log($"Tank {tanksInAttackState[0].name} moving to position {pos1}");
-            // tanksInAttackState[1].NavMeshAgent.SetDestination(pos2);
-            tanksInAttackState[1].m_States.Attack.dest = pos2;
+            tanksInAttackState[1].NavMeshAgent.SetDestination(pos2);
+            // tanksInAttackState[1].m_States.Attack.dest = pos2;
             // Debug.Log($"Tank {tanksInAttackState[1].name} moving to position {pos2}");
-            // tanksInAttackState[2].NavMeshAgent.SetDestination(pos3);
-            tanksInAttackState[2].m_States.Attack.dest = pos3;
+            tanksInAttackState[2].NavMeshAgent.SetDestination(pos3);
+            // tanksInAttackState[2].m_States.Attack.dest = pos3;
             // Debug.Log($"Tank {tanksInAttackState[2].name} moving to position {pos3}");
 
             // 输出最终结果
@@ -351,6 +345,7 @@ namespace CE6127.Tanks.AI
             }
         }
 
+/*
         private IEnumerator ApplyNavigateDestination()
         {
             while (true)
@@ -358,14 +353,15 @@ namespace CE6127.Tanks.AI
                 // Debug.Log("AttackState Coroutine ApplyNavigateDestination Called");
                 if (dest is Vector3 destvalue)
                 {
+                    Debug.Log($"Tank {m_TankSM.name} moving to position {destvalue}");
                     m_TankSM.NavMeshAgent.SetDestination(destvalue);
                     dest = null;
                 }
-                float waitInSec = 0.2f;
+                float waitInSec = 0.1f;
                 yield return new WaitForSeconds(waitInSec);
             }
         }
-
+*/
 
 
         /// <summary>
@@ -469,8 +465,8 @@ namespace CE6127.Tanks.AI
 
             // Set a new destination to dodge to
             Vector3 dodgeDestination = m_TankSM.transform.position + dodgeDirection * 20f; // Adjust the dodge distance as needed
-            // m_TankSM.NavMeshAgent.SetDestination(dodgeDestination);
-            dest = dodgeDestination;
+            m_TankSM.NavMeshAgent.SetDestination(dodgeDestination);
+            // dest = dodgeDestination;
         }
 
 

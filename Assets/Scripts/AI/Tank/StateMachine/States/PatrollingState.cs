@@ -23,13 +23,15 @@ namespace CE6127.Tanks.AI
         public override void Enter()
         {
             base.Enter();
-            m_TankSM.SetStopDistanceToZero();
+            m_TankSM.SetStopDistanceToTarget();
 
             AssignRandomSection();  // 分配坦克的巡逻区域
             if (patrolCoroutine != null)
             {
-                patrolCoroutine = m_TankSM.StartCoroutine(Patrolling());  // 开始巡逻
+                m_TankSM.StopCoroutine(patrolCoroutine);
+                patrolCoroutine = null;
             }
+            patrolCoroutine = m_TankSM.StartCoroutine(Patrolling());  // 开始巡逻
         }
 
         // 随机分配巡逻区域
