@@ -18,6 +18,8 @@ namespace CE6127.Tanks.AI
             public IdleState Idle;
             public PatrollingState Patrolling;
             public AttackState Attack;
+
+            public StrongAttackState StrongAttack;
             public FleeState Flee;
 
             internal States(TankSM sm)
@@ -26,6 +28,7 @@ namespace CE6127.Tanks.AI
                 Patrolling = new PatrollingState(sm);
                 Attack = new AttackState(sm);
                 Flee = new FleeState(sm);
+                StrongAttack = new StrongAttackState(sm);
             }
         }
 
@@ -90,6 +93,12 @@ namespace CE6127.Tanks.AI
         }
 
         private BaseState currentState; // Track the current state of the tank
+
+        //to get currentstate
+        public BaseState GetCurrentState()
+        {
+            return currentState;
+        }
 
         /// <summary>
         /// Method <c>SetStopDistanceToZero</c> sets the NavMeshAgent's stopping distance to zero.

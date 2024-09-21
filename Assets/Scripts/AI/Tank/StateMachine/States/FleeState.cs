@@ -10,11 +10,15 @@ namespace CE6127.Tanks.AI
         private Quaternion targetRotation;  // 目标旋转方向
         private bool isFleeing = false;  // 标记是否已经开始逃跑
         private float fleeTimer = 0f;  // 逃跑的时间计时器
-        private const float fleeDuration = 3f;  // 逃跑持续时间 6 秒
+        private const float fleeDuration = 6f;  // 逃跑持续时间
+        private const float raycastDistance = 10f;  // 射线检测距离
+        private const float rotationAngleOnObstacle = 90f;  // 遇到障碍时的旋转角度
+        private LayerMask obstacleLayer;  // 用于检测障碍物的层
 
         public FleeState(TankSM tankStateMachine) : base("Flee", tankStateMachine)
         {
             m_TankSM = tankStateMachine;
+            obstacleLayer = LayerMask.GetMask("Obstacle");  // 假设障碍物使用的层名为"Obstacle"
         }
 
         public override void Enter()
@@ -59,17 +63,21 @@ namespace CE6127.Tanks.AI
                 Debug.Log($"[FleeState] Tank {m_TankSM.name} has rotated and is now fleeing towards {fleeTarget}");
             }
 
+            // 进行逃跑时的射线检测
+            CheckForObstacles();
+
             // 计算逃跑时间
             if (isFleeing)
             {
                 fleeTimer += Time.deltaTime;
                 Debug.Log($"[FleeState] Tank {m_TankSM.name} fleeing for {fleeTimer:F2} seconds");
 
-                // 逃跑 6 秒后切换回巡逻状态
+                // 逃跑持续一段时间后切换回巡逻状态
                 if (fleeTimer >= fleeDuration)
                 {
-                    Debug.Log($"[FleeState] Tank {m_TankSM.name} fleeing duration reached. Switching to Patrolling.");
-                    m_TankSM.ChangeState(m_TankSM.m_States.Patrolling);  // 切换回巡逻状态
+                    Debug.Log($"[FleeState] Tank {m_TankSM.name} fleeing duration reached. Switching to StrongAttack.");
+                    //m_TankSM.ChangeState(m_TankSM.m_States.Patrolling);  // 切换回强攻状态
+                    m_TankSM.ChangeState(m_TankSM.m_States.StrongAttack); 
                 }
             }
         }
@@ -84,6 +92,29 @@ namespace CE6127.Tanks.AI
             {
                 hasRotated = true;  // 标记旋转完成
                 Debug.Log($"[FleeState] Tank {m_TankSM.name} has rotated, ready to flee.");
+            }
+        }
+
+        // 射线检测障碍物
+        private void CheckForObstacles()
+        {
+            Ray ray = new Ray(m_TankSM.transform.position, m_TankSM.transform.forward);
+            RaycastHit hit;
+
+            // 如果射线检测到障碍物
+            if (Physics.Raycast(ray, out hit, raycastDistance, obstacleLayer))
+            {
+                Debug.Log($"[FleeState] Tank {m_TankSM.name} detected obstacle: {hit.collider.name}. Avoiding...");
+
+                // 随机选择左转或右转来避开障碍物
+                float rotationAngle = Random.value > 0.5f ? rotationAngleOnObstacle : -rotationAngleOnObstacle;
+
+                // 计算新的旋转方向
+                targetRotation = Quaternion.AngleAxis(rotationAngle, Vector3.up) * m_TankSM.transform.rotation;
+
+                // 立即调整坦克的目标位置
+                Vector3 newFleeTarget = m_TankSM.transform.position + m_TankSM.transform.forward * fleeDistance;
+                m_TankSM.NavMeshAgent.SetDestination(newFleeTarget);
             }
         }
 
