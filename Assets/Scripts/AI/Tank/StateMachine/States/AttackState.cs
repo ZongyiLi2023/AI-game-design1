@@ -170,7 +170,7 @@ namespace CE6127.Tanks.AI
                 //Debug.Log("the health can be got");
 
                 // 检查血量是否小于最大血量的8/9
-                if (currentHealth <= maxHealth* 9 / 10)
+                if (currentHealth <= maxHealth* 0.8f)
                 {
                     Debug.Log("change to flee state");
                     m_StateMachine.ChangeState(new FleeState(m_TankSM));
@@ -180,12 +180,6 @@ namespace CE6127.Tanks.AI
                         m_TankSM.StopCoroutine(fireCoroutine);
                         fireCoroutine = null;
                     }
-                    /*if (navigateCoroutine != null)
-                    {
-                        m_TankSM.StopCoroutine(navigateCoroutine);
-                        navigateCoroutine = null;
-                        dest = null;
-                    }*/
                     return;
                 }
             }
@@ -199,7 +193,7 @@ namespace CE6127.Tanks.AI
 
 
                 float distance = Vector3.Distance(m_TankSM.transform.position, m_TankSM.Target.position);
-                if (distance > m_TankSM.TargetDistance * 1.5) // If target is out of range, transition to another state (e.g., Patrolling)
+                if (distance > 35.0f) // If target is out of range, transition to another state (e.g., Patrolling)
                 {
                     Debug.Log("Target out of range. Transitioning to Patrolling state.");
                     m_StateMachine.ChangeState(m_TankSM.m_States.Patrolling);
@@ -228,21 +222,6 @@ namespace CE6127.Tanks.AI
                             }
                             StartDodging();
                         }
-                    }
-                    else
-                    {
-                        // If no obstacles, stop dodging and resume normal attack behavior
-                        /*if (isDodging)
-                        {
-                            isDodging = false;
-                            // Resume shooting
-                            if (fireCoroutine == null)
-                            {
-                                fireCoroutine = m_TankSM.StartCoroutine(FireAtTarget());
-                            }
-                        }*/
-                        // turn the tank to face the target
-                        
                     }
                 }
             }

@@ -76,7 +76,7 @@ namespace CE6127.Tanks.AI
                 m_TankSM.StopCoroutine(fireCoroutine);
                 fireCoroutine = null;
             }
-            fireCoroutine = m_TankSM.StartCoroutine(FireAtTarget());
+            /*fireCoroutine = m_TankSM.StartCoroutine(FireAtTarget());*/
 
             // 启动队形更新协程
             if (formationCoroutine != null)
