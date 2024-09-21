@@ -30,8 +30,8 @@ namespace CE6127.Tanks.AI
         private static readonly object stateLock = new object(); // 防止并发问题
 
 
-        private GameObject uiCanvas;    // 用于显示UI的Canvas对象
-        private Text tankPositionsText; // 动态创建的Text组件
+        //private GameObject uiCanvas;    // 用于显示UI的Canvas对象
+        //private Text tankPositionsText; // 动态创建的Text组件
 
 
         /// <summary>
@@ -42,38 +42,38 @@ namespace CE6127.Tanks.AI
             m_TankSM = (TankSM)m_StateMachine;
 
             // 找到Canvas
-            uiCanvas = GameObject.Find("TankCanvas");
-            if (uiCanvas == null)
-            {
-                Debug.LogError("TankCanvas not found! Make sure it exists in the scene.");
-                return;
-            }
+            // uiCanvas = GameObject.Find("TankCanvas");
+            // if (uiCanvas == null)
+            // {
+            //     Debug.LogError("TankCanvas not found! Make sure it exists in the scene.");
+            //     return;
+            // }
 
             // 动态创建Text对象
-            GameObject newTextObj = new GameObject("DynamicTankPositionsText");
-            tankPositionsText = newTextObj.AddComponent<Text>();
+            // GameObject newTextObj = new GameObject("DynamicTankPositionsText");
+            // tankPositionsText = newTextObj.AddComponent<Text>();
 
             // 检查是否成功创建Text组件
-            if (tankPositionsText == null)
-            {
-                Debug.LogError("Failed to create Text component!");
-                return;
-            }
+            // if (tankPositionsText == null)
+            // {
+            //     Debug.LogError("Failed to create Text component!");
+            //     return;
+            // }
 
             // 设置Text的基本属性
-            tankPositionsText.text = " ";
-            tankPositionsText.font = Font.CreateDynamicFontFromOSFont("Arial", 24); // 使用系统默认字体
-            tankPositionsText.fontSize = 24;
-            tankPositionsText.color = Color.white;
-            tankPositionsText.alignment = TextAnchor.UpperLeft;
+            // tankPositionsText.text = " ";
+            // tankPositionsText.font = Font.CreateDynamicFontFromOSFont("Arial", 24); // 使用系统默认字体
+            // tankPositionsText.fontSize = 24;
+            // tankPositionsText.color = Color.white;
+            // tankPositionsText.alignment = TextAnchor.UpperLeft;
 
-            // 将Text对象作为子对象附加到Canvas
-            newTextObj.transform.SetParent(uiCanvas.transform, false);
+            // // 将Text对象作为子对象附加到Canvas
+            // newTextObj.transform.SetParent(uiCanvas.transform, false);
 
-            // 设置RectTransform
-            RectTransform rectTransform = newTextObj.GetComponent<RectTransform>();
-            rectTransform.anchoredPosition = new Vector2(0, 0);
-            rectTransform.sizeDelta = new Vector2(800, 400);
+            // // 设置RectTransform
+            // RectTransform rectTransform = newTextObj.GetComponent<RectTransform>();
+            // rectTransform.anchoredPosition = new Vector2(0, 0);
+            // rectTransform.sizeDelta = new Vector2(800, 400);
 
 
         }
@@ -159,7 +159,7 @@ namespace CE6127.Tanks.AI
                 Vector3 destination3 = tanksInAttackState[2].NavMeshAgent.destination;
 
                 // 实时更新Text组件，显示坦克的目的地
-                tankPositionsText.text = $"Tank 1 Destination: {destination1}\nTank 2 Destination: {destination2}\nTank 3 Destination: {destination3}";
+                //tankPositionsText.text = $"Tank 1 Destination: {destination1}\nTank 2 Destination: {destination2}\nTank 3 Destination: {destination3}";
             }
 
 
@@ -208,7 +208,7 @@ namespace CE6127.Tanks.AI
                     // rotate the tank but subject to the rotation speed
                     m_TankSM.transform.rotation = Quaternion.Slerp(m_TankSM.transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
                     // Detect obstacles using raycasting
-                    if (false)
+                    if (DetectObstacle())
                     {
                         // If an obstacle is detected, start dodging
                         if (!isDodging)
@@ -295,7 +295,7 @@ namespace CE6127.Tanks.AI
             // 输出每个计算出的目标位置
             //Debug.Log($"Position 1: {pos1}, Position 2: {pos2}, Position 3: {pos3}");
             // 将坦克的目的地显示在Text组件中
-            tankPositionsText.text = $"Tank 1 Destination: {destination1}\nTank 2 Destination: {destination2}\nTank 3 Destination: {destination3}";
+            //tankPositionsText.text = $"Tank 1 Destination: {destination1}\nTank 2 Destination: {destination2}\nTank 3 Destination: {destination3}";
 
             // 分配位置并打印调试信息
             tanksInAttackState[0].NavMeshAgent.SetDestination(pos1);
@@ -314,7 +314,7 @@ namespace CE6127.Tanks.AI
             // // 更新UI文本，显示坦克的位置
             // tankPositionsText.text = $"Tank 1 Position: {pos1}\nTank 2 Position: {pos2}\nTank 3 Position: {pos3}";
             // 更新UI文本，显示新的目的地
-            tankPositionsText.text = $"Tank 1 Destination: {pos1}\nTank 2 Destination: {pos2}\nTank 3 Destination: {pos3}";
+            //tankPositionsText.text = $"Tank 1 Destination: {pos1}\nTank 2 Destination: {pos2}\nTank 3 Destination: {pos3}";
         }
 
         private IEnumerator UpdateFormation()

@@ -18,37 +18,37 @@ namespace CE6127.Tanks.AI
 
         private static readonly object stateLock = new object(); // 防止并发问题
 
-        private GameObject uiCanvas;
-        private Text tankPositionsText;
+        //private GameObject uiCanvas;
+        //private Text tankPositionsText;
 
         public StrongAttackState(TankSM tankStateMachine) : base("StrongAttack", tankStateMachine)
         {
             m_TankSM = tankStateMachine;
 
-            // 找到UI Canvas
-            uiCanvas = GameObject.Find("TankCanvas");
-            if (uiCanvas == null)
-            {
-                Debug.LogError("TankCanvas not found! Make sure it exists in the scene.");
-                return;
-            }
+            // // 找到UI Canvas
+            // uiCanvas = GameObject.Find("TankCanvas");
+            // if (uiCanvas == null)
+            // {
+            //     Debug.LogError("TankCanvas not found! Make sure it exists in the scene.");
+            //     return;
+            // }
 
-            // 动态创建Text对象
-            GameObject newTextObj = new GameObject("DynamicTankPositionsText");
-            tankPositionsText = newTextObj.AddComponent<Text>();
+            // // 动态创建Text对象
+            // GameObject newTextObj = new GameObject("DynamicTankPositionsText");
+            // tankPositionsText = newTextObj.AddComponent<Text>();
 
-            // 设置Text的基本属性
-            tankPositionsText.text = " ";
-            tankPositionsText.font = Font.CreateDynamicFontFromOSFont("Arial", 24);
-            tankPositionsText.fontSize = 24;
-            tankPositionsText.color = Color.white;
-            tankPositionsText.alignment = TextAnchor.UpperLeft;
+            // // 设置Text的基本属性
+            // tankPositionsText.text = " ";
+            // tankPositionsText.font = Font.CreateDynamicFontFromOSFont("Arial", 24);
+            // tankPositionsText.fontSize = 24;
+            // tankPositionsText.color = Color.white;
+            // tankPositionsText.alignment = TextAnchor.UpperLeft;
 
-            // 将Text对象作为子对象附加到Canvas
-            newTextObj.transform.SetParent(uiCanvas.transform, false);
-            RectTransform rectTransform = newTextObj.GetComponent<RectTransform>();
-            rectTransform.anchoredPosition = new Vector2(0, 0);
-            rectTransform.sizeDelta = new Vector2(800, 400);
+            // // 将Text对象作为子对象附加到Canvas
+            // newTextObj.transform.SetParent(uiCanvas.transform, false);
+            // RectTransform rectTransform = newTextObj.GetComponent<RectTransform>();
+            // rectTransform.anchoredPosition = new Vector2(0, 0);
+            // rectTransform.sizeDelta = new Vector2(800, 400);
         }
 
         public override void Enter()
@@ -111,7 +111,7 @@ namespace CE6127.Tanks.AI
                 Vector3 destination1 = tanksInStrongAttackState[0].NavMeshAgent.destination;
                 Vector3 destination2 = tanksInStrongAttackState[1].NavMeshAgent.destination;
                 Vector3 destination3 = tanksInStrongAttackState[2].NavMeshAgent.destination;
-                tankPositionsText.text = $"strong attack: Tank 1 Destination: {destination1}\nTank 2 Destination: {destination2}\nTank 3 Destination: {destination3}";
+                //tankPositionsText.text = $"strong attack: Tank 1 Destination: {destination1}\nTank 2 Destination: {destination2}\nTank 3 Destination: {destination3}";
 
             }
 
@@ -137,7 +137,7 @@ namespace CE6127.Tanks.AI
                     // rotate the tank but subject to the rotation speed
                     m_TankSM.transform.rotation = Quaternion.Slerp(m_TankSM.transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
                     // Detect obstacles using raycasting
-                    if (false)
+                    if (DetectObstacle())
                     {
                         // If an obstacle is detected, start dodging
                         if (!isDodging)
