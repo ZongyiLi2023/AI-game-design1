@@ -250,18 +250,8 @@ namespace CE6127.Tanks.AI
                     Vector3 directionToTarget = m_TankSM.Target.position - m_TankSM.transform.position;
                     directionToTarget.y = 0; // Ignore the y-axis for rotation
 
-                    // Move towards the target if the distance is greater than the stop distance
+                    // Calculate the distance to target
                     float distanceToTarget = Vector3.Distance(m_TankSM.transform.position, m_TankSM.Target.position);
-                    /* if (distanceToTarget > m_TankSM.StopDistance)
-                    {
-                        m_TankSM.NavMeshAgent.SetDestination(m_TankSM.Target.position);
-                    }
-                    else
-                    {
-                        // Stop the tank if within stopping distance
-                        Debug.Log("Stopping the tank.");
-                        // m_TankSM.NavMeshAgent.ResetPath();
-                    } */
 
                     // Once the tank is facing the target, calculate the required launch force
                     float gravity = Mathf.Abs(Physics.gravity.y);
