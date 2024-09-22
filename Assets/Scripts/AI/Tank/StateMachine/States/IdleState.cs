@@ -27,7 +27,7 @@ namespace CE6127.Tanks.AI
         public override void Update()
         {
             base.Update();
-
+/*
             if (m_TankSM.Target != null)
             {
                 var dist = Vector3.Distance(m_TankSM.transform.position, m_TankSM.Target.position);
@@ -39,7 +39,10 @@ namespace CE6127.Tanks.AI
             var lookPos = m_TankSM.Target.position - m_TankSM.transform.position;
             lookPos.y = 0f;
             var rot = Quaternion.LookRotation(lookPos);
-            m_TankSM.transform.rotation = Quaternion.Slerp(m_TankSM.transform.rotation, rot, m_TankSM.OrientSlerpScalar);
+            m_TankSM.transform.rotation = Quaternion.Slerp(m_TankSM.transform.rotation, rot, m_TankSM.OrientSlerpScalar); */
+
+            // Unconditionally change to the patrolling state.
+            m_TankSM.ChangeState(m_TankSM.m_States.Patrolling);
         }
     }
 }
