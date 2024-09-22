@@ -183,7 +183,7 @@ namespace CE6127.Tanks.AI
             List<TankSM> availableTanks = new List<TankSM>();
             foreach (TankSM tank in tanksInAttackState)
             {
-                if (tank != null && tank.GetComponent<TankHealth>() != null && !tank.GetComponent<TankHealth>().IsDead)
+                if (tank != null && tank.GetCurrentState().Name == "Attack" && tank.GetComponent<TankHealth>() != null && !tank.GetComponent<TankHealth>().IsDead)
                 {
                     availableTanks.Add(tank);
                 }
