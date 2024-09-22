@@ -95,5 +95,10 @@ namespace CE6127.Tanks.AI
             // Turn the tank off.
             gameObject.SetActive(false);
         }
+
+        public bool IsDead
+        {
+            get { return m_Dead; }
+        }
     }
 }
