@@ -169,22 +169,6 @@ namespace CE6127.Tanks.AI
                     float rotationSpeed = m_TankSM.OrientSlerpScalar * m_TankSM.NavMeshAgent.angularSpeed;
                     // rotate the tank but subject to the rotation speed
                     m_TankSM.transform.rotation = Quaternion.Slerp(m_TankSM.transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
-                    // Detect obstacles using raycasting
-                    if (DetectObstacle())
-                    {
-                        // If an obstacle is detected, start dodging
-                        if (!isDodging)
-                        {
-                            isDodging = true;
-                            // Stop shooting while dodging
-                            if (fireCoroutine != null)
-                            {
-                                m_TankSM.StopCoroutine(fireCoroutine);
-                                fireCoroutine = null;
-                            }
-                            StartDodging();
-                        }
-                    }
                 }
             }
         }
@@ -389,23 +373,6 @@ namespace CE6127.Tanks.AI
             }
 
             return false;
-        }
-
-
-        /// <summary>
-        /// Method <c>StartDodging</c> starts the dodging movement to avoid the obstacle.
-        /// </summary>
-        private void StartDodging()
-        {
-            // Calculate a random direction to dodge
-            Vector3 dodgeDirection = Random.insideUnitSphere;
-            dodgeDirection.y = 0; // Only move in the XZ plane
-            dodgeDirection.Normalize();
-
-            // Set a new destination to dodge to
-            Vector3 dodgeDestination = m_TankSM.transform.position + dodgeDirection * 20f; // Adjust the dodge distance as needed
-            m_TankSM.NavMeshAgent.SetDestination(dodgeDestination);
-            // dest = dodgeDestination;
         }
 
 
