@@ -103,7 +103,7 @@ namespace CE6127.Tanks.AI
                 float currentHealth = (float)currentHealthField.GetValue(tankHealthInstance);
                 //Debug.Log("the health can be got");
 
-                if (currentHealth <= maxHealth* 0.8f)
+                if (currentHealth <= maxHealth* 0.2f)
                 {
                     //Debug.Log("change to flee state");
                     m_StateMachine.ChangeState(new FleeState(m_TankSM));
