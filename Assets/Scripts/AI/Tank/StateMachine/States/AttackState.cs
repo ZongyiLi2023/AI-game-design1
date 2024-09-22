@@ -19,19 +19,17 @@ namespace CE6127.Tanks.AI
         private bool isDodging;         // Indicates if the tank is currently dodging an obstacle.
         private const float RaycastDistance = 5f; // Distance for obstacle detection.
 
-        private object tankHealthInstance;  // 保存TankHealth实例
-        private FieldInfo currentHealthField; // 保存反射获取的m_CurrentHealth字段
-        private float maxHealth;  // 保存最大血量
+        private object tankHealthInstance;  
+        private FieldInfo currentHealthField; 
+        private float maxHealth;  
 
 
 
-        private static List<TankSM> tanksInAttackState = new List<TankSM>(); // 追踪所有进入 AttackState 的坦克
-        private const float TriangleSideLength = 10f;  // 三角形的边长
-        private static readonly object stateLock = new object(); // 防止并发问题
+        private static List<TankSM> tanksInAttackState = new List<TankSM>(); 
+        private const float TriangleSideLength = 10f;  
+        private static readonly object stateLock = new object(); 
 
 
-        //private GameObject uiCanvas;    // 用于显示UI的Canvas对象
-        //private Text tankPositionsText; // 动态创建的Text组件
 
 
         /// <summary>
@@ -40,40 +38,6 @@ namespace CE6127.Tanks.AI
         public AttackState(TankSM tankStateMachine) : base("Attack", tankStateMachine)
         {
             m_TankSM = (TankSM)m_StateMachine;
-
-            // 找到Canvas
-            // uiCanvas = GameObject.Find("TankCanvas");
-            // if (uiCanvas == null)
-            // {
-            //     Debug.LogError("TankCanvas not found! Make sure it exists in the scene.");
-            //     return;
-            // }
-
-            // 动态创建Text对象
-            // GameObject newTextObj = new GameObject("DynamicTankPositionsText");
-            // tankPositionsText = newTextObj.AddComponent<Text>();
-
-            // 检查是否成功创建Text组件
-            // if (tankPositionsText == null)
-            // {
-            //     Debug.LogError("Failed to create Text component!");
-            //     return;
-            // }
-
-            // 设置Text的基本属性
-            // tankPositionsText.text = " ";
-            // tankPositionsText.font = Font.CreateDynamicFontFromOSFont("Arial", 24); // 使用系统默认字体
-            // tankPositionsText.fontSize = 24;
-            // tankPositionsText.color = Color.white;
-            // tankPositionsText.alignment = TextAnchor.UpperLeft;
-
-            // // 将Text对象作为子对象附加到Canvas
-            // newTextObj.transform.SetParent(uiCanvas.transform, false);
-
-            // // 设置RectTransform
-            // RectTransform rectTransform = newTextObj.GetComponent<RectTransform>();
-            // rectTransform.anchoredPosition = new Vector2(0, 0);
-            // rectTransform.sizeDelta = new Vector2(800, 400);
 
 
         }
@@ -87,16 +51,16 @@ namespace CE6127.Tanks.AI
             // m_TankSM.SetStopDistanceToTarget(); // Ensure the tank stops at the correct distance from the target
             m_TankSM.SetStopDistanceToZero(); // Ensure the tank stops at the correct distance from the target
 
-            Debug.Log($"Tank {m_TankSM.name} is entering AttackState");
+            //Debug.Log($"Tank {m_TankSM.name} is entering AttackState");
 
             lock (stateLock)
             {
-                if (!tanksInAttackState.Contains(m_TankSM)) // 确保不会重复加入
+                if (!tanksInAttackState.Contains(m_TankSM)) 
                 {
                     tanksInAttackState.Add(m_TankSM);
-                    Debug.Log($"Tank {m_TankSM.name} entered AttackState, total tanks: {tanksInAttackState.Count}");
+                    //Debug.Log($"Tank {m_TankSM.name} entered AttackState, total tanks: {tanksInAttackState.Count}");
 
-                    // 当三个坦克都进入攻击状态后，计算队形
+                    
                     if (tanksInAttackState.Count == 3)
                     {
                         AssignTriangleFormation();
@@ -104,26 +68,26 @@ namespace CE6127.Tanks.AI
                 }
                 else
                 {
-                    Debug.LogWarning($"Tank {m_TankSM.name} already in AttackState.");
+                    //Debug.LogWarning($"Tank {m_TankSM.name} already in AttackState.");
                 }
             }
 
-            // 使用反射获取 TankHealth 实例
+           
             var tankHealthType = typeof(TankHealth);
             tankHealthInstance = m_TankSM.GetComponent(tankHealthType);
 
             if (tankHealthInstance != null)
             {
-                // 通过反射获取 m_CurrentHealth 私有字段
+                
                 currentHealthField = tankHealthType.GetField("m_CurrentHealth", BindingFlags.NonPublic | BindingFlags.Instance);
 
-                // 获取最大血量，直接访问公开的 StartingHealth 字段
+            
                 maxHealth = (float)tankHealthType.GetField("StartingHealth").GetValue(tankHealthInstance);
-                Debug.Log("get the health of the tank");
+               // Debug.Log("get the health of the tank");
             }
             else
             {
-                Debug.LogError("TankHealth component not found on the tank.");
+                //Debug.LogError("TankHealth component not found on the tank.");
             }
 
 
@@ -151,28 +115,26 @@ namespace CE6127.Tanks.AI
             base.Update();
             // Debug.Log("AttackState Update");
 
-            // 获取当前所有坦克的目的地
+     
             if (tanksInAttackState.Count == 3)
             {
                 Vector3 destination1 = tanksInAttackState[0].NavMeshAgent.destination;
                 Vector3 destination2 = tanksInAttackState[1].NavMeshAgent.destination;
                 Vector3 destination3 = tanksInAttackState[2].NavMeshAgent.destination;
 
-                // 实时更新Text组件，显示坦克的目的地
                 //tankPositionsText.text = $"Tank 1 Destination: {destination1}\nTank 2 Destination: {destination2}\nTank 3 Destination: {destination3}";
             }
 
 
             if (tankHealthInstance != null && currentHealthField != null)
             {
-                // 每帧通过反射获取当前血量
+                
                 float currentHealth = (float)currentHealthField.GetValue(tankHealthInstance);
                 //Debug.Log("the health can be got");
 
-                // 检查血量是否小于最大血量的8/9
                 if (currentHealth <= maxHealth* 0.8f)
                 {
-                    Debug.Log("change to flee state");
+                    //Debug.Log("change to flee state");
                     m_StateMachine.ChangeState(new FleeState(m_TankSM));
                     
                     if (fireCoroutine != null)
@@ -195,7 +157,7 @@ namespace CE6127.Tanks.AI
                 float distance = Vector3.Distance(m_TankSM.transform.position, m_TankSM.Target.position);
                 if (distance > 35.0f) // If target is out of range, transition to another state (e.g., Patrolling)
                 {
-                    Debug.Log("Target out of range. Transitioning to Patrolling state.");
+                    //Debug.Log("Target out of range. Transitioning to Patrolling state.");
                     m_StateMachine.ChangeState(m_TankSM.m_States.Patrolling);
                 }
                 else
@@ -242,11 +204,11 @@ namespace CE6127.Tanks.AI
                 if (tanksInAttackState.Contains(m_TankSM))
                 {
                     tanksInAttackState.Remove(m_TankSM);
-                    Debug.Log($"Tank {m_TankSM.name} exited AttackState, remaining tanks: {tanksInAttackState.Count}");
+                    //Debug.Log($"Tank {m_TankSM.name} exited AttackState, remaining tanks: {tanksInAttackState.Count}");
                 }
                 else
                 {
-                    Debug.LogWarning($"Tank {m_TankSM.name} was not found in AttackState list.");
+                    //Debug.LogWarning($"Tank {m_TankSM.name} was not found in AttackState list.");
                 }
             }
 
@@ -269,35 +231,34 @@ namespace CE6127.Tanks.AI
         {
             if (tanksInAttackState.Count < 3)
             {
-                Debug.LogWarning("Not enough tanks in AttackState to form a triangle.");
+                //Debug.LogWarning("Not enough tanks in AttackState to form a triangle.");
                 return;
             }
 
             // Debug.Log("Assigning triangle formation...");
 
-            // 选定第一个坦克作为队形的中心
+            
             // TankSM centerTank = tanksInAttackState[0];
             Vector3 centerPosition = m_TankSM.Target.position;
 
-            Debug.Log($"Center tank position: {centerPosition}");
+            //Debug.Log($"Center tank position: {centerPosition}");
 
-            // 计算第二和第三个坦克的位置（形成一个等边三角形）
+           
             Vector3 pos1 = centerPosition + new Vector3(TriangleSideLength, 0, 0); // 右边
             Vector3 pos2 = centerPosition + new Vector3(-TriangleSideLength / 2, 0, Mathf.Sqrt(3) * TriangleSideLength / 2); // 左上
             Vector3 pos3 = centerPosition + new Vector3(-TriangleSideLength / 2, 0, -Mathf.Sqrt(3) * TriangleSideLength / 2); // 左下
 
 
 
-            // 获取坦克的目的地
             Vector3 destination1 = tanksInAttackState[0].NavMeshAgent.destination;
             Vector3 destination2 = tanksInAttackState[1].NavMeshAgent.destination;
             Vector3 destination3 = tanksInAttackState[2].NavMeshAgent.destination;
-            // 输出每个计算出的目标位置
+            
             //Debug.Log($"Position 1: {pos1}, Position 2: {pos2}, Position 3: {pos3}");
-            // 将坦克的目的地显示在Text组件中
+          
             //tankPositionsText.text = $"Tank 1 Destination: {destination1}\nTank 2 Destination: {destination2}\nTank 3 Destination: {destination3}";
 
-            // 分配位置并打印调试信息
+          
             tanksInAttackState[0].NavMeshAgent.SetDestination(pos1);
             // tanksInAttackState[0].m_States.Attack.dest = pos1;
             // Debug.Log($"Tank {tanksInAttackState[0].name} moving to position {pos1}");
@@ -308,13 +269,8 @@ namespace CE6127.Tanks.AI
             // tanksInAttackState[2].m_States.Attack.dest = pos3;
             // Debug.Log($"Tank {tanksInAttackState[2].name} moving to position {pos3}");
 
-            // 输出最终结果
             // Debug.Log("Triangle formation assigned successfully.");
 
-            // // 更新UI文本，显示坦克的位置
-            // tankPositionsText.text = $"Tank 1 Position: {pos1}\nTank 2 Position: {pos2}\nTank 3 Position: {pos3}";
-            // 更新UI文本，显示新的目的地
-            //tankPositionsText.text = $"Tank 1 Destination: {pos1}\nTank 2 Destination: {pos2}\nTank 3 Destination: {pos3}";
         }
 
         private IEnumerator UpdateFormation()

@@ -25,23 +25,23 @@ namespace CE6127.Tanks.AI
             base.Enter();
             m_TankSM.SetStopDistanceToTarget();
 
-            AssignRandomSection();  // 分配坦克的巡逻区域
+            AssignRandomSection();  
             if (patrolCoroutine != null)
             {
                 m_TankSM.StopCoroutine(patrolCoroutine);
                 patrolCoroutine = null;
             }
-            patrolCoroutine = m_TankSM.StartCoroutine(Patrolling());  // 开始巡逻
+            patrolCoroutine = m_TankSM.StartCoroutine(Patrolling());  
         }
 
-        // 随机分配巡逻区域
+        
         private void AssignRandomSection()
         {
             float mapMinX = -50f;
             float mapMaxX = 50f;
             float sectionWidth = (mapMaxX - mapMinX) / 3;
 
-            int randomSection = Random.Range(0, 3);  // 随机选择分区
+            int randomSection = Random.Range(0, 3);  
             switch (randomSection)
             {
                 case 0:
@@ -68,50 +68,50 @@ namespace CE6127.Tanks.AI
         {
             base.Update();
 
-            // 如果有玩家目标则持续追踪玩家
+            
             if (m_TankSM.Target != null)
             {
-                // 计算坦克和玩家之间的距离
+                
                 float dist = Vector3.Distance(m_TankSM.transform.position, m_TankSM.Target.position);
 
-                // 如果距离到达指定距离则转移状态
+                
                 if (dist <= m_TankSM.TargetDistance)
                 {
                     m_TankSM.ChangeState(m_TankSM.m_States.Attack);
                 }
                 else
                 {
-                    // 将计算出的距离传递给 FollowPlayer 方法
+                
                     FollowPlayer(dist);
                 }
             }
         }
 
 
-        // 生成新的巡逻目标
+        
         private void GenerateNewPatrolDestination()
         {
             float destinationX = Random.Range(PatrolMinX, PatrolMaxX);
             float destinationZ = Random.Range(PatrolMinZ, PatrolMaxZ);
             m_Destination = new Vector3(destinationX, 0f, destinationZ);
 
-            // 设置坦克的巡逻目标
+            
             m_TankSM.NavMeshAgent.SetDestination(m_Destination);
         }
 
 
-        // 追踪玩家的逻辑
+        
         private void FollowPlayer(float distance)
         {
-            float closerStopDistance = m_TankSM.StopDistance / 2;  // 减小停止距离的一半
-            if (distance > closerStopDistance)  // 如果距离大于新的停止距离
+            float closerStopDistance = m_TankSM.StopDistance / 2;  
+            if (distance > closerStopDistance)  
             {
                 m_TankSM.NavMeshAgent.SetDestination(m_TankSM.Target.position);
             }
         }
 
 
-        // 在玩家周围生成随机目标位置
+    
         /*
         private Vector3 GetRandomPositionAroundPlayer()
         {
@@ -135,13 +135,13 @@ namespace CE6127.Tanks.AI
         {
             while (true)
             {
-                Debug.Log("PatrollingState Coroutine Patrolling Called");
-                // 如果有玩家则追踪玩家
+                //Debug.Log("PatrollingState Coroutine Patrolling Called");
+                
                 if (m_TankSM.Target != null)
                 {
                     m_TankSM.NavMeshAgent.SetDestination(m_TankSM.Target.position);
                 }
-                // 否则游走
+                
                 else
                 {
                     float destinationX = Random.Range(PatrolMinX, PatrolMaxX);

@@ -13,10 +13,10 @@ namespace CE6127.Tanks.AI
 
         private bool isDodging;         // Indicates if the tank is currently dodging an obstacle.
         private const float RaycastDistance = 5f; // Distance for obstacle detection.
-        private static List<TankSM> tanksInStrongAttackState = new List<TankSM>(); // 追踪所有进入 StrongAttackState 的坦克
-        private const float FormationSideLength = 10f;  // 队形的边长
+        private static List<TankSM> tanksInStrongAttackState = new List<TankSM>(); 
+        private const float FormationSideLength = 10f;  
 
-        private static readonly object stateLock = new object(); // 防止并发问题
+        private static readonly object stateLock = new object(); 
 
         //private GameObject uiCanvas;
         //private Text tankPositionsText;
@@ -25,30 +25,6 @@ namespace CE6127.Tanks.AI
         {
             m_TankSM = tankStateMachine;
 
-            // // 找到UI Canvas
-            // uiCanvas = GameObject.Find("TankCanvas");
-            // if (uiCanvas == null)
-            // {
-            //     Debug.LogError("TankCanvas not found! Make sure it exists in the scene.");
-            //     return;
-            // }
-
-            // // 动态创建Text对象
-            // GameObject newTextObj = new GameObject("DynamicTankPositionsText");
-            // tankPositionsText = newTextObj.AddComponent<Text>();
-
-            // // 设置Text的基本属性
-            // tankPositionsText.text = " ";
-            // tankPositionsText.font = Font.CreateDynamicFontFromOSFont("Arial", 24);
-            // tankPositionsText.fontSize = 24;
-            // tankPositionsText.color = Color.white;
-            // tankPositionsText.alignment = TextAnchor.UpperLeft;
-
-            // // 将Text对象作为子对象附加到Canvas
-            // newTextObj.transform.SetParent(uiCanvas.transform, false);
-            // RectTransform rectTransform = newTextObj.GetComponent<RectTransform>();
-            // rectTransform.anchoredPosition = new Vector2(0, 0);
-            // rectTransform.sizeDelta = new Vector2(800, 400);
         }
 
         public override void Enter()
@@ -56,21 +32,21 @@ namespace CE6127.Tanks.AI
             base.Enter();
             m_TankSM.SetStopDistanceToZero();
 
-            Debug.Log($"Tank {m_TankSM.name} is entering StrongAttackState");
+            //Debug.Log($"Tank {m_TankSM.name} is entering StrongAttackState");
 
             lock (stateLock)
             {
                 if (!tanksInStrongAttackState.Contains(m_TankSM))
                 {
                     tanksInStrongAttackState.Add(m_TankSM);
-                    Debug.Log($"Tank {m_TankSM.name} entered StrongAttackState, total tanks: {tanksInStrongAttackState.Count}");
+                    //Debug.Log($"Tank {m_TankSM.name} entered StrongAttackState, total tanks: {tanksInStrongAttackState.Count}");
 
-                    // 根据坦克数量计算队形
+                
                     AssignFormation();
                 }
             }
 
-            // 启动射击协程
+            // start shooting coroutine
             if (fireCoroutine != null)
             {
                 m_TankSM.StopCoroutine(fireCoroutine);
@@ -78,7 +54,7 @@ namespace CE6127.Tanks.AI
             }
             /*fireCoroutine = m_TankSM.StartCoroutine(FireAtTarget());*/
 
-            // 启动队形更新协程
+            // start formation coroutine
             if (formationCoroutine != null)
             {
                 m_TankSM.StopCoroutine(formationCoroutine);
@@ -90,21 +66,6 @@ namespace CE6127.Tanks.AI
         {
             base.Update();
 
-            // if (tanksInStrongAttackState.Count >= 2)
-            // {
-            //     Vector3 destination1 = tanksInStrongAttackState[0].NavMeshAgent.destination;
-            //     Vector3 destination2 = tanksInStrongAttackState[1].NavMeshAgent.destination;
-
-            //     if (tanksInStrongAttackState.Count == 3)
-            //     {
-            //         Vector3 destination3 = tanksInStrongAttackState[2].NavMeshAgent.destination;
-            //         tankPositionsText.text = $"Tank 1 Destination: {destination1}\nTank 2 Destination: {destination2}\nTank 3 Destination: {destination3}";
-            //     }
-            //     else
-            //     {
-            //         tankPositionsText.text = $"Tank 1 Destination: {destination1}\nTank 2 Destination: {destination2}";
-            //     }
-            // }
 
             if (tanksInStrongAttackState.Count == 3)
             {
@@ -124,7 +85,7 @@ namespace CE6127.Tanks.AI
                 float distance = Vector3.Distance(m_TankSM.transform.position, m_TankSM.Target.position);
                 if (distance > m_TankSM.TargetDistance * 1.5) // If target is out of range, transition to another state (e.g., Patrolling)
                 {
-                    Debug.Log("strong attack: Target out of range. Transitioning to Patrolling state.");
+                    //Debug.Log("strong attack: Target out of range. Transitioning to Patrolling state.");
                     m_StateMachine.ChangeState(m_TankSM.m_States.Patrolling);
                 }
                 else
@@ -173,7 +134,7 @@ namespace CE6127.Tanks.AI
 
         private void AssignFormation()
         {
-            // 获取所有处于 AttackState 或 StrongAttackState 的坦克
+            
             List<TankSM> tanksInAttackOrStrongAttack = new List<TankSM>();
 
             lock (stateLock)
@@ -189,7 +150,7 @@ namespace CE6127.Tanks.AI
 
             if (tanksInAttackOrStrongAttack.Count < 2)
             {
-                Debug.LogWarning("Not enough tanks in AttackState or StrongAttackState to form a formation.");
+                //Debug.LogWarning("Not enough tanks in AttackState or StrongAttackState to form a formation.");
                 return;
             }
 
@@ -197,21 +158,21 @@ namespace CE6127.Tanks.AI
 
             if (tanksInAttackOrStrongAttack.Count == 2)
             {
-                // 两个坦克，形成一条直线
+                // 2 tanks
                 Vector3 pos1 = centerPosition + new Vector3(FormationSideLength, 0, 0); // 右边
                 Vector3 pos2 = centerPosition + new Vector3(-FormationSideLength, 0, 0); // 左边
 
                 tanksInAttackOrStrongAttack[0].NavMeshAgent.SetDestination(pos1);
                 tanksInAttackOrStrongAttack[1].NavMeshAgent.SetDestination(pos2);
-                Debug.LogWarning("the 2 tanks are in a line.");
+                //Debug.LogWarning("the 2 tanks are in a line.");
             }
             else if (tanksInAttackOrStrongAttack.Count >= 3)
             {
                 Vector3 centerPosition2 = m_TankSM.Target.position;
 
-                Debug.Log($"Center tank position: {centerPosition2}");
+                //Debug.Log($"Center tank position: {centerPosition2}");
 
-                // 三个或更多坦克，形成一个等边三角形
+                // 3 tanks
                 Vector3 pos1 = centerPosition2 + new Vector3(FormationSideLength, 0, 0); // 右边
                 Vector3 pos2 = centerPosition2 + new Vector3(-FormationSideLength / 2, 0, Mathf.Sqrt(3) * FormationSideLength / 2); // 左上
                 Vector3 pos3 = centerPosition2 + new Vector3(-FormationSideLength / 2, 0, -Mathf.Sqrt(3) * FormationSideLength / 2); // 左下
@@ -219,7 +180,7 @@ namespace CE6127.Tanks.AI
                 tanksInAttackOrStrongAttack[0].NavMeshAgent.SetDestination(pos1);
                 tanksInAttackOrStrongAttack[1].NavMeshAgent.SetDestination(pos2);
                 tanksInAttackOrStrongAttack[2].NavMeshAgent.SetDestination(pos3);
-                Debug.LogWarning("the 3 tanks are in a triangle.");
+                //Debug.LogWarning("the 3 tanks are in a triangle.");
             }
         }
 
@@ -268,26 +229,6 @@ namespace CE6127.Tanks.AI
             }
         }
 
-        // private float CalculateLaunchForce(float distance)
-        // {
-        //     float gravity = Mathf.Abs(Physics.gravity.y);
-        //     float angleInRadians = Mathf.Deg2Rad * 45;
-        //     float launchForce = Mathf.Sqrt((distance * gravity) / Mathf.Sin(2 * angleInRadians));
-        //     return Mathf.Clamp(launchForce, m_TankSM.LaunchForceMinMax.x, m_TankSM.LaunchForceMinMax.y);
-        // }
-
-        // private bool DetectObstacle()
-        // {
-        //     RaycastHit[] hits = Physics.RaycastAll(m_TankSM.transform.position, m_TankSM.transform.forward, 5f);
-        //     foreach (var hit in hits)
-        //     {
-        //         if (hit.collider != null && hit.collider.gameObject != m_TankSM.Target.gameObject)
-        //         {
-        //             return true;
-        //         }
-        //     }
-        //     return false;
-        // }
 
         private bool DetectObstacle()
         {
@@ -342,7 +283,7 @@ namespace CE6127.Tanks.AI
                 if (tanksInStrongAttackState.Contains(m_TankSM))
                 {
                     tanksInStrongAttackState.Remove(m_TankSM);
-                    Debug.Log($"Tank {m_TankSM.name} exited StrongAttackState, remaining tanks: {tanksInStrongAttackState.Count}");
+                    //Debug.Log($"Tank {m_TankSM.name} exited StrongAttackState, remaining tanks: {tanksInStrongAttackState.Count}");
                 }
             }
 
