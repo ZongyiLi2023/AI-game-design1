@@ -5,7 +5,6 @@ using System.Reflection;
 using System.Collections.Generic;
 using UnityEngine.UI;
 
-
 namespace CE6127.Tanks.AI
 {
     /// <summary>
@@ -27,9 +26,7 @@ namespace CE6127.Tanks.AI
 
         private static List<TankSM> tanksInAttackState = new List<TankSM>(); 
         private const float TriangleSideLength = 10f;  
-        private static readonly object stateLock = new object(); 
-
-
+        private static readonly object stateLock = new object();
 
 
         /// <summary>
@@ -51,16 +48,22 @@ namespace CE6127.Tanks.AI
             // m_TankSM.SetStopDistanceToTarget(); // Ensure the tank stops at the correct distance from the target
             m_TankSM.SetStopDistanceToZero(); // Ensure the tank stops at the correct distance from the target
 
-            //Debug.Log($"Tank {m_TankSM.name} is entering AttackState");
-
             lock (stateLock)
             {
                 if (!tanksInAttackState.Contains(m_TankSM)) 
                 {
                     tanksInAttackState.Add(m_TankSM);
-                    //Debug.Log($"Tank {m_TankSM.name} entered AttackState, total tanks: {tanksInAttackState.Count}");
 
-                    
+                    // Calculate the number of alive tanks by checking the IsDead property directly from TankHealth
+                    int aliveTanks = tanksInAttackState
+                        .Where(tank => tank != null && tank.GetComponent<TankHealth>() != null && !tank.GetComponent<TankHealth>().IsDead)
+                        .Count();
+
+
+                    // Log the number of alive tanks out of 3
+                    Debug.Log($"There are {aliveTanks} out of 3 tanks still alive.");
+
+
                     if (tanksInAttackState.Count == 3)
                     {
                         AssignTriangleFormation();
