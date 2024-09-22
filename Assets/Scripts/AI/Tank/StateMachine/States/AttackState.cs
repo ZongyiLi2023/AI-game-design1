@@ -68,7 +68,7 @@ namespace CE6127.Tanks.AI
                 }
                 else
                 {
-                    //Debug.LogWarning($"Tank {m_TankSM.name} already in AttackState.");
+                    Debug.LogWarning($"Tank {m_TankSM.name} already in AttackState.");
                 }
             }
 
@@ -87,7 +87,7 @@ namespace CE6127.Tanks.AI
             }
             else
             {
-                //Debug.LogError("TankHealth component not found on the tank.");
+                Debug.LogError("TankHealth component not found on the tank.");
             }
 
 
@@ -208,7 +208,7 @@ namespace CE6127.Tanks.AI
                 }
                 else
                 {
-                    //Debug.LogWarning($"Tank {m_TankSM.name} was not found in AttackState list.");
+                    Debug.LogWarning($"Tank {m_TankSM.name} was not found in AttackState list.");
                 }
             }
 
