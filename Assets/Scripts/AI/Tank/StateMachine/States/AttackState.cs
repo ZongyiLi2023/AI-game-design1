@@ -15,7 +15,6 @@ namespace CE6127.Tanks.AI
     {
         private TankSM m_TankSM;        // Reference to the tank state machine.
         private Coroutine fireCoroutine; // Reference to the firing coroutine.
-        private Coroutine triangleFormationCoroutine; // Reference to the triangle formation coroutine.
         private bool isDodging;         // Indicates if the tank is currently dodging an obstacle.
         private const float RaycastDistance = 5f; // Distance for obstacle detection.
 
@@ -99,12 +98,6 @@ namespace CE6127.Tanks.AI
                 fireCoroutine = null;
             }
             fireCoroutine = m_TankSM.StartCoroutine(FireAtTarget());
-
-            if (triangleFormationCoroutine != null)
-            {
-                m_TankSM.StopCoroutine(triangleFormationCoroutine);
-            }
-            triangleFormationCoroutine = m_TankSM.StartCoroutine(UpdateFormation());
         }
 
         /// <summary>
@@ -203,12 +196,6 @@ namespace CE6127.Tanks.AI
                 m_TankSM.StopCoroutine(fireCoroutine);
                 fireCoroutine = null;
             }
-            // Stop the formation coroutine
-            if (triangleFormationCoroutine != null)
-            {
-                m_TankSM.StopCoroutine(triangleFormationCoroutine);
-                triangleFormationCoroutine = null;
-            }
         }
 
         private void AssignTriangleFormation()
@@ -257,34 +244,6 @@ namespace CE6127.Tanks.AI
 
         }
 
-        private IEnumerator UpdateFormation()
-        {
-            while (true)
-            {
-                // Debug.Log("AttackState Coroutine UpdateFormation Called");
-                AssignTriangleFormation();
-                float waitInSec = 0.5f;
-                yield return new WaitForSeconds(waitInSec);
-            }
-        }
-
-/*
-        private IEnumerator ApplyNavigateDestination()
-        {
-            while (true)
-            {
-                // Debug.Log("AttackState Coroutine ApplyNavigateDestination Called");
-                if (dest is Vector3 destvalue)
-                {
-                    Debug.Log($"Tank {m_TankSM.name} moving to position {destvalue}");
-                    m_TankSM.NavMeshAgent.SetDestination(destvalue);
-                    dest = null;
-                }
-                float waitInSec = 0.1f;
-                yield return new WaitForSeconds(waitInSec);
-            }
-        }
-*/
 
 
         /// <summary>
