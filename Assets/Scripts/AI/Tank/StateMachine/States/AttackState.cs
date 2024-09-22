@@ -59,11 +59,6 @@ namespace CE6127.Tanks.AI
                     tanksInAttackState.Add(m_TankSM);
                     //Debug.Log($"Tank {m_TankSM.name} entered AttackState, total tanks: {tanksInAttackState.Count}");
 
-                    
-                    if (tanksInAttackState.Count == 3)
-                    {
-                        AssignTriangleFormation();
-                    }
                 }
                 else
                 {
@@ -164,6 +159,7 @@ namespace CE6127.Tanks.AI
                     m_TankSM.transform.rotation = Quaternion.Slerp(m_TankSM.transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
                 }
             }
+            AssignTriangleFormation();
         }
 
 
