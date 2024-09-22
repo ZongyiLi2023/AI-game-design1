@@ -52,16 +52,6 @@ namespace CE6127.Tanks.AI
                 if (!tanksInAttackState.Contains(m_TankSM)) 
                 {
                     tanksInAttackState.Add(m_TankSM);
-
-                    // Calculate the number of alive tanks by checking the IsDead property directly from TankHealth
-                    /*int aliveTanks = tanksInAttackState
-                        .Where(tank => tank != null && tank.GetComponent<TankHealth>() != null && !tank.GetComponent<TankHealth>().IsDead)
-                        .Count();
-
-
-                    // Log the number of alive tanks out of 3
-                    Debug.Log($"There are {aliveTanks} out of 3 tanks still alive."); */
-
                 }
                 else
                 {
@@ -201,13 +191,7 @@ namespace CE6127.Tanks.AI
 
             Debug.Log("Available tanks: " + availableTanks.Count);
 
-            // Debug.Log("Assigning triangle formation...");
-
-            
-            // TankSM centerTank = tanksInAttackState[0];
             Vector3 centerPosition = m_TankSM.Target.position;
-
-            //Debug.Log($"Center tank position: {centerPosition}");
 
             float deltaAngle = 360.0f / availableTanks.Count;
 
@@ -217,34 +201,6 @@ namespace CE6127.Tanks.AI
                 Vector3 pos = centerPosition + new Vector3(TriangleSideLength * Mathf.Cos(Mathf.Deg2Rad * (i * deltaAngle)), 0, TriangleSideLength * Mathf.Sin(Mathf.Deg2Rad * (i * deltaAngle)));
                 availableTanks[i].NavMeshAgent.SetDestination(pos);
             }
-
-           
-            // Vector3 pos1 = centerPosition + new Vector3(TriangleSideLength, 0, 0); // 右边
-            // Vector3 pos2 = centerPosition + new Vector3(-TriangleSideLength / 2, 0, Mathf.Sqrt(3) * TriangleSideLength / 2); // 左上
-            // Vector3 pos3 = centerPosition + new Vector3(-TriangleSideLength / 2, 0, -Mathf.Sqrt(3) * TriangleSideLength / 2); // 左下
-
-
-
-            // Vector3 destination1 = tanksInAttackState[0].NavMeshAgent.destination;
-            // Vector3 destination2 = tanksInAttackState[1].NavMeshAgent.destination;
-            // Vector3 destination3 = tanksInAttackState[2].NavMeshAgent.destination;
-            
-            //Debug.Log($"Position 1: {pos1}, Position 2: {pos2}, Position 3: {pos3}");
-          
-            //tankPositionsText.text = $"Tank 1 Destination: {destination1}\nTank 2 Destination: {destination2}\nTank 3 Destination: {destination3}";
-
-          
-            // tanksInAttackState[0].NavMeshAgent.SetDestination(pos1);
-            // tanksInAttackState[0].m_States.Attack.dest = pos1;
-            // Debug.Log($"Tank {tanksInAttackState[0].name} moving to position {pos1}");
-            // tanksInAttackState[1].NavMeshAgent.SetDestination(pos2);
-            // tanksInAttackState[1].m_States.Attack.dest = pos2;
-            // Debug.Log($"Tank {tanksInAttackState[1].name} moving to position {pos2}");
-            // tanksInAttackState[2].NavMeshAgent.SetDestination(pos3);
-            // tanksInAttackState[2].m_States.Attack.dest = pos3;
-            // Debug.Log($"Tank {tanksInAttackState[2].name} moving to position {pos3}");
-
-            // Debug.Log("Triangle formation assigned successfully.");
 
         }
 
