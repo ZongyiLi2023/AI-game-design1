@@ -103,16 +103,6 @@ namespace CE6127.Tanks.AI
             base.Update();
             // Debug.Log("AttackState Update");
 
-     
-            if (tanksInAttackState.Count == 3)
-            {
-                Vector3 destination1 = tanksInAttackState[0].NavMeshAgent.destination;
-                Vector3 destination2 = tanksInAttackState[1].NavMeshAgent.destination;
-                Vector3 destination3 = tanksInAttackState[2].NavMeshAgent.destination;
-
-                //tankPositionsText.text = $"Tank 1 Destination: {destination1}\nTank 2 Destination: {destination2}\nTank 3 Destination: {destination3}";
-            }
-
 
             if (tankHealthInstance != null && currentHealthField != null)
             {
