@@ -11,6 +11,8 @@ namespace CE6127.Tanks.AI
         private Coroutine fireCoroutine;
         private Coroutine formationCoroutine;
 
+        private const float TriangleSideLength = 10f;
+
         private bool isDodging;         // Indicates if the tank is currently dodging an obstacle.
         private const float RaycastDistance = 5f; // Distance for obstacle detection.
         private static List<TankSM> tanksInStrongAttackState = new List<TankSM>(); 
@@ -148,39 +150,42 @@ namespace CE6127.Tanks.AI
                 }
             }
 
-            if (tanksInAttackOrStrongAttack.Count < 2)
+            // 获取所有有效的坦克
+            //List<TankSM> availableTanks = new List<TankSM>();
+            foreach (TankSM tank in tanksInStrongAttackState)
             {
-                //Debug.LogWarning("Not enough tanks in AttackState or StrongAttackState to form a formation.");
-                return;
+                // 检查坦克是否存在且其NavMeshAgent启用
+                if (tank != null && tank.NavMeshAgent != null && tank.NavMeshAgent.isActiveAndEnabled && !tank.GetComponent<TankHealth>().IsDead)
+                {
+                    tanksInAttackOrStrongAttack.Add(tank);
+                }
             }
+
+            //Debug.Log("Available tanks: " + availableTanks.Count);
+
+            // 如果有效坦克数量不足，不进行队形分配
+            // if (availableTanks.Count < 2)
+            // {
+            //     return;
+            // }
 
             Vector3 centerPosition = m_TankSM.Target.position;
 
-            if (tanksInAttackOrStrongAttack.Count == 2)
+            float deltaAngle = 360.0f / tanksInAttackOrStrongAttack.Count;
+
+            // 为每个有效坦克分配在三角形或其他队形中的位置
+            for (int i = 0; i < tanksInAttackOrStrongAttack.Count; i++)
             {
-                // 2 tanks
-                Vector3 pos1 = centerPosition + new Vector3(FormationSideLength, 0, 0); // 右边
-                Vector3 pos2 = centerPosition + new Vector3(-FormationSideLength, 0, 0); // 左边
+                Vector3 pos = centerPosition + new Vector3(
+                    TriangleSideLength * Mathf.Cos(Mathf.Deg2Rad * (i * deltaAngle)),
+                    0,
+                    TriangleSideLength * Mathf.Sin(Mathf.Deg2Rad * (i * deltaAngle))
+                );
 
-                tanksInAttackOrStrongAttack[0].NavMeshAgent.SetDestination(pos1);
-                tanksInAttackOrStrongAttack[1].NavMeshAgent.SetDestination(pos2);
-                //Debug.LogWarning("the 2 tanks are in a line.");
-            }
-            else if (tanksInAttackOrStrongAttack.Count >= 3)
-            {
-                Vector3 centerPosition2 = m_TankSM.Target.position;
-
-                //Debug.Log($"Center tank position: {centerPosition2}");
-
-                // 3 tanks
-                Vector3 pos1 = centerPosition2 + new Vector3(FormationSideLength, 0, 0); // 右边
-                Vector3 pos2 = centerPosition2 + new Vector3(-FormationSideLength / 2, 0, Mathf.Sqrt(3) * FormationSideLength / 2); // 左上
-                Vector3 pos3 = centerPosition2 + new Vector3(-FormationSideLength / 2, 0, -Mathf.Sqrt(3) * FormationSideLength / 2); // 左下
-
-                tanksInAttackOrStrongAttack[0].NavMeshAgent.SetDestination(pos1);
-                tanksInAttackOrStrongAttack[1].NavMeshAgent.SetDestination(pos2);
-                tanksInAttackOrStrongAttack[2].NavMeshAgent.SetDestination(pos3);
-                //Debug.LogWarning("the 3 tanks are in a triangle.");
+                if (tanksInAttackOrStrongAttack[i].NavMeshAgent.isActiveAndEnabled)
+                {
+                   tanksInAttackOrStrongAttack[i].NavMeshAgent.SetDestination(pos);
+                }
             }
         }
 
