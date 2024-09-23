@@ -5,30 +5,41 @@ using UnityEngine.UI;
 
 namespace CE6127.Tanks.AI
 {
+    /// <summary>
+    /// Class <c>StrongAttackState</c> defines the tank's behavior during a strong attack phase.
+    /// In this state, tanks will engage the target with powerful attacks and attempt to form a coordinated 
+    /// formation. The tanks will periodically check for obstacles and adjust their paths accordingly.
+    /// Tanks can also dodge obstacles, and if the target goes out of range, they will switch to a patrolling state.
+    /// The state also handles launching projectiles towards the target at calculated intervals.
+    /// </summary>
     internal class StrongAttackState : BaseState
     {
-        private TankSM m_TankSM;
-        private Coroutine fireCoroutine;
-        private Coroutine formationCoroutine;
+        private TankSM m_TankSM;  // Reference to the tank state machine.
+        private Coroutine fireCoroutine; // Coroutine reference for firing projectiles.
+        private Coroutine formationCoroutine; // Coroutine reference for maintaining the formation.
 
-        private const float TriangleSideLength = 10f;
+        private const float TriangleSideLength = 10f;  // Side length of the triangular formation.
 
         private bool isDodging;         // Indicates if the tank is currently dodging an obstacle.
         private const float RaycastDistance = 5f; // Distance for obstacle detection.
         private static List<TankSM> tanksInStrongAttackState = new List<TankSM>(); 
-        private const float FormationSideLength = 10f;  
+        private const float FormationSideLength = 10f;  // Side length of the formation.
+        private static readonly object stateLock = new object();  // Lock object for thread safety.
 
-        private static readonly object stateLock = new object(); 
 
-        //private GameObject uiCanvas;
-        //private Text tankPositionsText;
-
+        /// <summary>
+        /// Constructor <c>StrongAttackState</c> initializes the tank state machine.
+        /// </summary>
         public StrongAttackState(TankSM tankStateMachine) : base("StrongAttack", tankStateMachine)
         {
             m_TankSM = tankStateMachine;
 
         }
 
+        /// <summary>
+        /// Method <c>Enter</c> is called when the tank enters the StrongAttackState.
+        /// It initiates the attack sequence, sets up the formation, and starts necessary coroutines.
+        /// </summary>
         public override void Enter()
         {
             base.Enter();
@@ -42,8 +53,6 @@ namespace CE6127.Tanks.AI
                 {
                     tanksInStrongAttackState.Add(m_TankSM);
                     //Debug.Log($"Tank {m_TankSM.name} entered StrongAttackState, total tanks: {tanksInStrongAttackState.Count}");
-
-                
                     AssignFormation();
                 }
             }
@@ -54,7 +63,6 @@ namespace CE6127.Tanks.AI
                 m_TankSM.StopCoroutine(fireCoroutine);
                 fireCoroutine = null;
             }
-            /*fireCoroutine = m_TankSM.StartCoroutine(FireAtTarget());*/
 
             // start formation coroutine
             if (formationCoroutine != null)
@@ -64,6 +72,10 @@ namespace CE6127.Tanks.AI
             formationCoroutine = m_TankSM.StartCoroutine(UpdateFormation());
         }
 
+        /// <summary>
+        /// Method <c>Update</c> is called every frame to handle behavior while in StrongAttackState.
+        /// The tank continues to aim at the target, dodge obstacles, and maintain formation.
+        /// </summary>
         public override void Update()
         {
             base.Update();
@@ -108,23 +120,16 @@ namespace CE6127.Tanks.AI
                     }
                     else
                     {
-                        // If no obstacles, stop dodging and resume normal attack behavior
-                        /*if (isDodging)
-                        {
-                            isDodging = false;
-                            // Resume shooting
-                            if (fireCoroutine == null)
-                            {
-                                fireCoroutine = m_TankSM.StartCoroutine(FireAtTarget());
-                            }
-                        }*/
-                        // turn the tank to face the target
 
                     }
                 }
             }
         }
 
+        /// <summary>
+        /// Method <c>AssignFormation</c> assigns tanks to specific positions in a triangular formation based on 
+        /// their current state and health status.
+        /// </summary>
         private void AssignFormation()
         {
             
@@ -141,30 +146,19 @@ namespace CE6127.Tanks.AI
                 }
             }
 
-            // 获取所有有效的坦克
             //List<TankSM> availableTanks = new List<TankSM>();
             foreach (TankSM tank in tanksInStrongAttackState)
             {
-                // 检查坦克是否存在且其NavMeshAgent启用
                 if (tank != null && tank.NavMeshAgent != null && tank.NavMeshAgent.isActiveAndEnabled && !tank.GetComponent<TankHealth>().IsDead)
                 {
                     tanksInAttackOrStrongAttack.Add(tank);
                 }
             }
 
-            //Debug.Log("Available tanks: " + availableTanks.Count);
-
-            // 如果有效坦克数量不足，不进行队形分配
-            // if (availableTanks.Count < 2)
-            // {
-            //     return;
-            // }
-
             Vector3 centerPosition = m_TankSM.Target.position;
 
             float deltaAngle = 360.0f / tanksInAttackOrStrongAttack.Count;
 
-            // 为每个有效坦克分配在三角形或其他队形中的位置
             for (int i = 0; i < tanksInAttackOrStrongAttack.Count; i++)
             {
                 Vector3 pos = centerPosition + new Vector3(
@@ -178,7 +172,9 @@ namespace CE6127.Tanks.AI
             }
         }
 
-
+        /// <summary>
+        /// Coroutine <c>UpdateFormation</c> periodically updates the tank's formation every 0.5 seconds.
+        /// </summary>
         private IEnumerator UpdateFormation()
         {
             while (true)
@@ -188,6 +184,10 @@ namespace CE6127.Tanks.AI
             }
         }
 
+        /// <summary>
+        /// Coroutine <c>FireAtTarget</c> handles the tank's firing behavior while in StrongAttackState.
+        /// The tank launches projectiles towards the target at regular intervals, adjusting the launch force based on distance.
+        /// </summary>
         private IEnumerator FireAtTarget()
         {
             float initialWait = m_TankSM.FireInterval.x;
@@ -201,8 +201,6 @@ namespace CE6127.Tanks.AI
                     directionToTarget.y = 0;
 
                     float distanceToTarget = Vector3.Distance(m_TankSM.transform.position, m_TankSM.Target.position);
-                    // float launchForce = CalculateLaunchForce(distanceToTarget);
-                    // m_TankSM.LaunchProjectile(launchForce);
                      float gravity = Mathf.Abs(Physics.gravity.y);
                     float angleInRadians = Mathf.Deg2Rad * 45; // Use a 45 degree angle for optimal distance
 
@@ -223,7 +221,10 @@ namespace CE6127.Tanks.AI
             }
         }
 
-
+        /// <summary>
+        /// Method <c>DetectObstacle</c> uses raycasting to detect obstacles in front of the tank and 
+        /// returns true if an obstacle is found, prompting the tank to dodge.
+        /// </summary>
         private bool DetectObstacle()
         {
             RaycastHit[] hits;
@@ -268,6 +269,10 @@ namespace CE6127.Tanks.AI
             // dest = dodgeDestination;
         }
 
+        /// <summary>
+        /// Method <c>Exit</c> is called when the tank exits the StrongAttackState.
+        /// It stops any ongoing coroutines and removes the tank from the list of tanks in the strong attack state.
+        /// </summary>
         public override void Exit()
         {
             base.Exit();

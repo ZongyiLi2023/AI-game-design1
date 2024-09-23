@@ -96,6 +96,9 @@ namespace CE6127.Tanks.AI
             gameObject.SetActive(false);
         }
 
+        /// <summary>
+        /// Getter <c>IsDead</c> returns whether or not the tank is dead.
+        /// </summary>
         public bool IsDead
         {
             get { return m_Dead; }

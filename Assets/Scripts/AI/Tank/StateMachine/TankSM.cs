@@ -218,7 +218,6 @@ namespace CE6127.Tanks.AI
                 // Transition to AttackState if target is within StartToTargetDist
                 if (distanceToTarget <= StartToTargetDist.y && currentState != m_States.Attack)
                 {
-                    // Debug.Log("Tank State changed to Attack");
                     ChangeState(m_States.Attack);
                 }
                 // Transition back to PatrollingState if the target is out of StopAtTargetDist range
@@ -237,9 +236,6 @@ namespace CE6127.Tanks.AI
         public void LaunchProjectile(float launchForce = 1f)
         {
             launchForce = Mathf.Min(Mathf.Max(LaunchForceMinMax.x, launchForce), LaunchForceMinMax.y);
-
-            // Set the fired flag so only Fire is only called once.
-            // m_Fired = true;
 
             // Create an instance of the shell and store a reference to it's rigidbody.
             Rigidbody shellInstance = Instantiate(Shell, FireTransform.position, FireTransform.rotation) as Rigidbody;
