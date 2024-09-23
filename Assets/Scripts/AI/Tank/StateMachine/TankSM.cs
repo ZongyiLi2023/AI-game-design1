@@ -19,11 +19,16 @@ namespace CE6127.Tanks.AI
             public PatrollingState Patrolling;
             public AttackState Attack;
 
+            public StrongAttackState StrongAttack;
+            public FleeState Flee;
+
             internal States(TankSM sm)
             {
                 Idle = new IdleState(sm);
                 Patrolling = new PatrollingState(sm);
                 Attack = new AttackState(sm);
+                Flee = new FleeState(sm);
+                StrongAttack = new StrongAttackState(sm);
             }
         }
 
@@ -85,6 +90,14 @@ namespace CE6127.Tanks.AI
         {
             NavMeshAgent.speed = GameManager.Speed;
             NavMeshAgent.angularSpeed = GameManager.AngularSpeed;
+        }
+
+        private BaseState currentState; // Track the current state of the tank
+
+        //to get currentstate
+        public BaseState GetCurrentState()
+        {
+            return currentState;
         }
 
         /// <summary>
@@ -155,6 +168,20 @@ namespace CE6127.Tanks.AI
         }
 
         /// <summary>
+        /// Method <c>ChangeState</c> handles the transition between states.
+        /// </summary>
+        private new void ChangeState(BaseState newState)
+        {
+            if (currentState != null)
+            {
+                currentState.Exit(); // Exit the current state
+            }
+
+            currentState = newState; // Switch to the new state
+            currentState.Enter();    // Enter the new state
+        }
+
+        /// <summary>
         /// Method <c>Update</c> is called every frame, if the MonoBehaviour is enabled.
         /// </summary>
         private new void Update()
@@ -166,6 +193,7 @@ namespace CE6127.Tanks.AI
             }
             else if (GameManager.IsRoundPlaying)
             {
+                HandleStateTransitions();
                 base.Update();
             }
             else
@@ -176,14 +204,38 @@ namespace CE6127.Tanks.AI
         }
 
         /// <summary>
+        /// Method <c>HandleStateTransitions</c> handles state transitions based on target distance.
+        /// </summary>
+        private void HandleStateTransitions()
+        {
+            if (Target != null)
+            {
+                // Calculate the distance to the target
+                float distanceToTarget = Vector3.Distance(transform.position, Target.position);
+
+                // Debug.Log("target distance: " + distanceToTarget + " stop distance: " + StopDistance + " target distance: " + TargetDistance);
+
+                // Transition to AttackState if target is within StartToTargetDist
+                if (distanceToTarget <= StartToTargetDist.y && currentState != m_States.Attack)
+                {
+                    ChangeState(m_States.Attack);
+                }
+                // Transition back to PatrollingState if the target is out of StopAtTargetDist range
+                else if (distanceToTarget > StartToTargetDist.y && currentState != m_States.Patrolling)
+                {
+                    // Debug.Log("Tank State changed to Patrol");
+                    ChangeState(m_States.Patrolling);
+                }
+            }
+        }
+
+
+        /// <summary>
         /// Method <c>LaunchProjectile</c> instantiate and launch the shell.
         /// </summary>
         public void LaunchProjectile(float launchForce = 1f)
         {
             launchForce = Mathf.Min(Mathf.Max(LaunchForceMinMax.x, launchForce), LaunchForceMinMax.y);
-
-            // Set the fired flag so only Fire is only called once.
-            // m_Fired = true;
 
             // Create an instance of the shell and store a reference to it's rigidbody.
             Rigidbody shellInstance = Instantiate(Shell, FireTransform.position, FireTransform.rotation) as Rigidbody;
