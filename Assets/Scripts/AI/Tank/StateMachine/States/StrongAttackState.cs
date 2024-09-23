@@ -69,15 +69,6 @@ namespace CE6127.Tanks.AI
             base.Update();
 
 
-            if (tanksInStrongAttackState.Count == 3)
-            {
-                Vector3 destination1 = tanksInStrongAttackState[0].NavMeshAgent.destination;
-                Vector3 destination2 = tanksInStrongAttackState[1].NavMeshAgent.destination;
-                Vector3 destination3 = tanksInStrongAttackState[2].NavMeshAgent.destination;
-                //tankPositionsText.text = $"strong attack: Tank 1 Destination: {destination1}\nTank 2 Destination: {destination2}\nTank 3 Destination: {destination3}";
-
-            }
-
             // Check if the target is still within range
             if (m_TankSM.Target != null)
             {
@@ -182,10 +173,8 @@ namespace CE6127.Tanks.AI
                     TriangleSideLength * Mathf.Sin(Mathf.Deg2Rad * (i * deltaAngle))
                 );
 
-                if (tanksInAttackOrStrongAttack[i].NavMeshAgent.isActiveAndEnabled)
-                {
                    tanksInAttackOrStrongAttack[i].NavMeshAgent.SetDestination(pos);
-                }
+               
             }
         }
 
